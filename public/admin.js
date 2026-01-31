@@ -771,6 +771,12 @@ window.addEventListener('popstate', () => {
   router.handleRoute();
 });
 
-// Initial route
-router.handleRoute();
+// Initial route - wait for DOM to be ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    router.handleRoute();
+  });
+} else {
+  router.handleRoute();
+}
 

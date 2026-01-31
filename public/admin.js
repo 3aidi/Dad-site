@@ -191,13 +191,6 @@ async function logout() {
 
 // Login Page
 router.on('/admin/login', async () => {
-  // Check if already logged in
-  const isAuth = await router.checkAuth();
-  if (isAuth) {
-    router.navigate('/admin/dashboard');
-    return;
-  }
-
   app.innerHTML = `
     <div class="login-container">
       <div class="login-box">

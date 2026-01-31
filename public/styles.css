@@ -1,12 +1,15 @@
 :root {
-  --primary-color: #2c3e50;
-  --secondary-color: #3498db;
-  --accent-color: #e74c3c;
-  --text-color: #333;
-  --light-bg: #f8f9fa;
-  --border-color: #ddd;
-  --hover-bg: #ecf0f1;
-  --shadow: 0 2px 8px rgba(0,0,0,0.1);
+  --primary-color: #2563eb;
+  --secondary-color: #14b8a6;
+  --accent-color: #ef4444;
+  --text-color: #1e293b;
+  --light-text: #64748b;
+  --light-bg: #f8fafc;
+  --border-color: #e2e8f0;
+  --card-bg: #ffffff;
+  --hover-bg: #f1f5f9;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 * {
@@ -24,10 +27,10 @@ body {
 
 /* Header */
 header {
-  background-color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: white;
-  padding: 1.5rem 0;
-  box-shadow: var(--shadow);
+  padding: 2rem 0;
+  box-shadow: var(--shadow-lg);
 }
 
 .header-content {
@@ -37,13 +40,14 @@ header {
 }
 
 header h1 {
-  font-size: 2rem;
+  font-size: 2.25rem;
+  font-weight: 700;
   margin-bottom: 0.5rem;
 }
 
 header p {
-  opacity: 0.9;
-  font-size: 1rem;
+  opacity: 0.95;
+  font-size: 1.0625rem;
 }
 
 /* Navigation */
@@ -70,13 +74,14 @@ nav a {
   color: var(--text-color);
   text-decoration: none;
   border-bottom: 3px solid transparent;
-  transition: all 0.3s;
+  transition: all 0.2s;
+  font-weight: 500;
 }
 
 nav a:hover,
 nav a.active {
-  color: var(--secondary-color);
-  border-bottom-color: var(--secondary-color);
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
 /* Main Content */
@@ -128,30 +133,32 @@ main {
 }
 
 .card {
-  background: white;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: all 0.3s;
+  transition: all 0.2s;
   cursor: pointer;
   box-shadow: var(--shadow);
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  border-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
 }
 
 .card h3 {
-  color: var(--primary-color);
-  margin-bottom: 0.5rem;
-  font-size: 1.5rem;
+  color: var(--text-color);
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .card p {
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--light-text);
+  font-size: 0.9375rem;
+  line-height: 1.6;
 }
 
 /* List View */
@@ -160,21 +167,24 @@ main {
 }
 
 .list-item {
-  background: white;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow);
 }
 
 .list-item:hover {
   background: var(--hover-bg);
-  border-color: var(--secondary-color);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
 }
 
 .list-item h3 {
@@ -189,52 +199,55 @@ main {
 
 /* Lesson Content */
 .lesson-content {
-  background: white;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 2rem;
   margin-top: 2rem;
   line-height: 1.8;
-  font-size: 1.1rem;
+  font-size: 1.0625rem;
+  box-shadow: var(--shadow);
 }
 
 .lesson-content p {
   margin-bottom: 1rem;
+  color: var(--text-color);
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  color: #999;
+  color: var(--light-text);
 }
 
 .empty-state-icon {
   font-size: 4rem;
   margin-bottom: 1rem;
+  opacity: 0.5;
 }
 
 .empty-state h3 {
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
-  color: #666;
+  color: var(--text-color);
 }
 
 /* Loading */
 .loading {
   text-align: center;
   padding: 4rem;
-  color: var(--secondary-color);
-  font-size: 1.2rem;
+  color: var(--primary-color);
+  font-size: 1.125rem;
 }
 
 /* Error */
 .error {
-  background-color: #fee;
+  background-color: #fef2f2;
   border: 1px solid var(--accent-color);
   color: var(--accent-color);
-  padding: 1rem;
-  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
   margin: 2rem 0;
 }
 

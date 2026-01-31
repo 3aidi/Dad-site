@@ -1,4 +1,4 @@
-// Admin Router
+﻿// Admin Router
 class AdminRouter {
   constructor() {
     this.routes = {};
@@ -147,24 +147,30 @@ function adminLayout(content, activeNav) {
   return `
     <div class="admin-layout">
       <aside class="sidebar">
-        <h2>Admin Panel</h2>
+        <div class="sidebar-header">
+          <div class="logo">
+            <i class="fas fa-graduation-cap"></i>
+          </div>
+          <h2>لوحة التحكم</h2>
+          <p>إدارة المحتوى التعليمي</p>
+        </div>
         <nav>
           <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/dashboard')">
-            📊 Dashboard
+            <i class="fas fa-chart-line"></i> لوحة المعلومات
           </a>
           <a href="/admin/classes" class="${activeNav === 'classes' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/classes')">
-            📚 Classes
+            <i class="fas fa-book-open"></i> الصفوف الدراسية
           </a>
           <a href="/admin/units" class="${activeNav === 'units' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/units')">
-            📖 Units
+            <i class="fas fa-folder-open"></i> الوحدات الدراسية
           </a>
           <a href="/admin/lessons" class="${activeNav === 'lessons' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/lessons')">
-            📄 Lessons
+            <i class="fas fa-file-alt"></i> الدروس
           </a>
         </nav>
         <div class="sidebar-footer">
-          <p>Logged in as: <strong>${router.currentUser?.username || 'Admin'}</strong></p>
-          <button class="btn btn-danger btn-block btn-sm" onclick="logout()">Logout</button>
+          <p>مسجل الدخول: <strong>${router.currentUser?.username || 'مدير'}</strong></p>
+          <button class="btn btn-danger btn-block btn-sm" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
         </div>
       </aside>
       <main class="admin-main">
@@ -195,19 +201,22 @@ router.on('/admin/login', async () => {
   app.innerHTML = `
     <div class="login-container">
       <div class="login-box">
-        <h1>Admin Login</h1>
-        <p>Educational Content System</p>
+        <div class="logo">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <h1>تسجيل الدخول</h1>
+        <p>لوحة التحكم - منصة المحتوى التعليمي الرقمي</p>
         <form id="login-form">
           <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required autofocus>
+            <label for="username"><i class="fas fa-user"></i> اسم المستخدم</label>
+            <input type="text" id="username" name="username" required autofocus placeholder="أدخل اسم المستخدم">
           </div>
           <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
+            <label for="password"><i class="fas fa-lock"></i> كلمة المرور</label>
+            <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
           </div>
           <div id="login-error" style="display: none;" class="alert alert-error"></div>
-          <button type="submit" class="btn btn-primary btn-block">Login</button>
+          <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-sign-in-alt"></i> دخول</button>
         </form>
       </div>
     </div>
@@ -240,30 +249,30 @@ router.on('/admin/dashboard', async () => {
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
-        <h1>Dashboard</h1>
+        <h1>لوحة المعلومات</h1>
+        <p>نظرة عامة على المحتوى التعليمي</p>
       </div>
       <div class="admin-content">
-        <h2>Content Overview</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 2rem;">
-          <div style="background: var(--light-bg); padding: 2rem; border-radius: 8px; text-align: center;">
-            <h3 style="font-size: 3rem; color: var(--secondary-color);">${classes.length}</h3>
-            <p>Classes</p>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3>الصفوف الدراسية</h3>
+            <div class="number">${classes.length}</div>
           </div>
-          <div style="background: var(--light-bg); padding: 2rem; border-radius: 8px; text-align: center;">
-            <h3 style="font-size: 3rem; color: var(--success-color);">${units.length}</h3>
-            <p>Units</p>
+          <div class="stat-card">
+            <h3>الوحدات الدراسية</h3>
+            <div class="number">${units.length}</div>
           </div>
-          <div style="background: var(--light-bg); padding: 2rem; border-radius: 8px; text-align: center;">
-            <h3 style="font-size: 3rem; color: var(--warning-color);">${lessons.length}</h3>
-            <p>Lessons</p>
+          <div class="stat-card">
+            <h3>الدروس</h3>
+            <div class="number">${lessons.length}</div>
           </div>
         </div>
-        <div style="margin-top: 3rem;">
-          <h3>Quick Actions</h3>
+        <div class="quick-الإجراءات">
+          <h3>إجراءات سريعة</h3>
           <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="router.navigate('/admin/classes')">Manage Classes</button>
-            <button class="btn btn-success" onclick="router.navigate('/admin/units')">Manage Units</button>
-            <button class="btn btn-secondary" onclick="router.navigate('/admin/lessons')">Manage Lessons</button>
+            <button class="btn btn-primary" onclick="router.navigate('/admin/classes')"><i class="fas fa-book-open"></i> إدارة الصفوف</button>
+            <button class="btn btn-primary" onclick="router.navigate('/admin/units')"><i class="fas fa-folder-open"></i> إدارة الوحدات</button>
+            <button class="btn btn-primary" onclick="router.navigate('/admin/lessons')"><i class="fas fa-file-alt"></i> إدارة الدروس</button>
           </div>
         </div>
       </div>
@@ -283,27 +292,27 @@ router.on('/admin/classes', async () => {
       : classes.map(cls => `
           <tr>
             <td>${escapeHtml(cls.name)}</td>
-            <td>${new Date(cls.created_at).toLocaleDateString()}</td>
-            <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')">Edit</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')">Delete</button>
+            <td>${new Date(cls.تاريخ الإنشاء_at).toLocaleDateString('ar-EG')}</td>
+            <td class="table-الإجراءات">
+              <button class="btn btn-sm btn-secondary" onclick="editClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
           </tr>
         `).join('');
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
-        <h1>Manage Classes</h1>
-        <button class="btn btn-success" onclick="showCreateClassForm()">+ New Class</button>
+        <h1>إدارة الصفوف الدراسية</h1>
+        <button class="btn btn-primary" onclick="showCreateClassForm()"><i class="fas fa-plus"></i> صف جديد</button>
       </div>
       <div class="admin-content">
         <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Class Name</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>اسم الصف</th>
+                <th>تاريخ الإنشاء</th>
+                <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -324,17 +333,17 @@ window.showCreateClassForm = function() {
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Create New Class</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        <h2>إضافة صف دراسي جديد</h2>
+        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
       </div>
       <form id="create-class-form">
         <div class="form-group">
-          <label for="class-name">Class Name *</label>
-          <input type="text" id="class-name" required autofocus>
+          <label for="class-name"><i class="fas fa-book-open"></i> اسم الصف *</label>
+          <input type="text" id="class-name" required autofocus placeholder="مثال: الصف الأول">
         </div>
         <div class="btn-group">
-          <button type="submit" class="btn btn-success">Create Class</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ الصف</button>
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i> إلغاء</button>
         </div>
       </form>
     </div>
@@ -349,7 +358,7 @@ window.showCreateClassForm = function() {
       });
       modal.remove();
       router.navigate('/admin/classes');
-      showAlert('Class created successfully!');
+      showAlert('تم إضافة الصف بنجاح!');
     } catch (error) {
       showAlert(error.message, 'error');
     }
@@ -362,17 +371,17 @@ window.editClass = function(id, name) {
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Edit Class</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        <h2>تعديل الصف الدراسي</h2>
+        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
       </div>
       <form id="edit-class-form">
         <div class="form-group">
-          <label for="edit-class-name">Class Name *</label>
+          <label for="edit-class-name"><i class="fas fa-book-open"></i> اسم الصف *</label>
           <input type="text" id="edit-class-name" value="${name}" required autofocus>
         </div>
         <div class="btn-group">
-          <button type="submit" class="btn btn-primary">Update Class</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التغييرات</button>
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i> إلغاء</button>
         </div>
       </form>
     </div>
@@ -387,7 +396,7 @@ window.editClass = function(id, name) {
       });
       modal.remove();
       router.navigate('/admin/classes');
-      showAlert('Class updated successfully!');
+      showAlert('تم تحديث الصف بنجاح!');
     } catch (error) {
       showAlert(error.message, 'error');
     }
@@ -395,14 +404,14 @@ window.editClass = function(id, name) {
 };
 
 window.deleteClass = async function(id, name) {
-  if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will also delete all units and lessons in this class.`)) {
+  if (!confirm(`هل أنت متأكد من حذف "${name}"؟\n\nسيتم حذف جميع الوحدات والدروس التابعة لهذا الصف.`)) {
     return;
   }
   
   try {
     await adminApi.delete(`/api/classes/${id}`);
     router.navigate('/admin/classes');
-    showAlert('Class deleted successfully!');
+    showAlert('تم حذف الصف بنجاح!');
   } catch (error) {
     showAlert(error.message, 'error');
   }
@@ -419,34 +428,34 @@ router.on('/admin/units', async () => {
     window.availableClasses = classes;
 
     const tableRows = units.length === 0 
-      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon">📖</div><p>No units yet. Create your first unit!</p></td></tr>'
+      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon">📖</div><p>لا توجد وحدات دراسية بعد. Create your first unit!</p></td></tr>'
       : units.map(unit => `
           <tr>
             <td>${escapeHtml(unit.title)}</td>
             <td>${escapeHtml(unit.class_name)}</td>
-            <td>${new Date(unit.created_at).toLocaleDateString()}</td>
-            <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}', ${unit.class_id})">Edit</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}')">Delete</button>
+            <td>${new Date(unit.تاريخ الإنشاء_at).toLocaleDateString()}</td>
+            <td class="table-الإجراءات">
+              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}', ${unit.class_id})">تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}')">حذف</button>
             </td>
           </tr>
         `).join('');
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
-        <h1>Manage Units</h1>
-        <button class="btn btn-success" onclick="showCreateUnitForm()">+ New Unit</button>
+        <h1>إدارة الوحدات الدراسية</h1>
+        <button class="btn btn-success" onclick="showCreateUnitForm()">وحدة جديدة</button>
       </div>
       <div class="admin-content">
-        ${classes.length === 0 ? '<div class="alert alert-info">Create a class first before adding units.</div>' : ''}
+        ${classes.length === 0 ? '<div class="alert alert-info">قم بإنشاء صف دراسي أولا before adding units.</div>' : ''}
         <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Unit Title</th>
+                <th>عنوان الوحدة</th>
                 <th>Class</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>تاريخ الإنشاء</th>
+                <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -471,24 +480,24 @@ window.showCreateUnitForm = function() {
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Create New Unit</h2>
+        <h2>إضافة وحدة دراسية جديدة</h2>
         <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
       </div>
       <form id="create-unit-form">
         <div class="form-group">
-          <label for="unit-title">Unit Title *</label>
+          <label for="unit-title">عنوان الوحدة *</label>
           <input type="text" id="unit-title" required autofocus>
         </div>
         <div class="form-group">
-          <label for="unit-class">Class *</label>
+          <label for="unit-class">الصف الدراسي *</label>
           <select id="unit-class" required>
-            <option value="">Select a class...</option>
+            <option value="">اختر صفا دراسيا...</option>
             ${classOptions}
           </select>
         </div>
         <div class="btn-group">
-          <button type="submit" class="btn btn-success">Create Unit</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="submit" class="btn btn-success">حفظ الوحدة</button>
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
         </div>
       </form>
     </div>
@@ -504,7 +513,7 @@ window.showCreateUnitForm = function() {
       });
       modal.remove();
       router.navigate('/admin/units');
-      showAlert('Unit created successfully!');
+      showAlert('تم إضافة الوحدة بنجاح!');
     } catch (error) {
       showAlert(error.message, 'error');
     }
@@ -521,23 +530,23 @@ window.editUnit = function(id, title, classId) {
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Edit Unit</h2>
+        <h2>تعديل الوحدة</h2>
         <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
       </div>
       <form id="edit-unit-form">
         <div class="form-group">
-          <label for="edit-unit-title">Unit Title *</label>
+          <label for="edit-unit-title">عنوان الوحدة *</label>
           <input type="text" id="edit-unit-title" value="${title}" required autofocus>
         </div>
         <div class="form-group">
-          <label for="edit-unit-class">Class *</label>
+          <label for="edit-unit-class">الصف الدراسي *</label>
           <select id="edit-unit-class" required>
             ${classOptions}
           </select>
         </div>
         <div class="btn-group">
-          <button type="submit" class="btn btn-primary">Update Unit</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
         </div>
       </form>
     </div>
@@ -553,7 +562,7 @@ window.editUnit = function(id, title, classId) {
       });
       modal.remove();
       router.navigate('/admin/units');
-      showAlert('Unit updated successfully!');
+      showAlert('تم تحديث الوحدة بنجاح!');
     } catch (error) {
       showAlert(error.message, 'error');
     }
@@ -561,14 +570,14 @@ window.editUnit = function(id, title, classId) {
 };
 
 window.deleteUnit = async function(id, title) {
-  if (!confirm(`Are you sure you want to delete "${title}"?\n\nThis will also delete all lessons in this unit.`)) {
+  if (!confirm(`هل أنت متأكد من حذف "${title}"?\n\nسيتم حذف جميع الدروس التابعة لهذه الوحدة.`)) {
     return;
   }
   
   try {
     await adminApi.delete(`/api/units/${id}`);
     router.navigate('/admin/units');
-    showAlert('Unit deleted successfully!');
+    showAlert('تم حذف الوحدة بنجاح!');
   } catch (error) {
     showAlert(error.message, 'error');
   }
@@ -585,36 +594,36 @@ router.on('/admin/lessons', async () => {
     window.availableUnits = units;
 
     const tableRows = lessons.length === 0 
-      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📄</div><p>No lessons yet. Create your first lesson!</p></td></tr>'
+      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📄</div><p>لا توجد دروس بعد. Create your first lesson!</p></td></tr>'
       : lessons.map(lesson => `
           <tr>
             <td>${escapeHtml(lesson.title)}</td>
             <td>${escapeHtml(lesson.unit_title)}</td>
             <td>${escapeHtml(lesson.class_name)}</td>
-            <td>${new Date(lesson.created_at).toLocaleDateString()}</td>
-            <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})">Edit</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml(lesson.title).replace(/'/g, "\\'")}')">Delete</button>
+            <td>${new Date(lesson.تاريخ الإنشاء_at).toLocaleDateString()}</td>
+            <td class="table-الإجراءات">
+              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})">تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml(lesson.title).replace(/'/g, "\\'")}')">حذف</button>
             </td>
           </tr>
         `).join('');
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
-        <h1>Manage Lessons</h1>
-        <button class="btn btn-success" onclick="showCreateLessonForm()">+ New Lesson</button>
+        <h1>إدارة الدروس</h1>
+        <button class="btn btn-success" onclick="showCreateLessonForm()">درس جديد</button>
       </div>
       <div class="admin-content">
-        ${units.length === 0 ? '<div class="alert alert-info">Create a unit first before adding lessons.</div>' : ''}
+        ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا before adding lessons.</div>' : ''}
         <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Lesson Title</th>
+                <th>عنوان الدرس</th>
                 <th>Unit</th>
                 <th>Class</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>تاريخ الإنشاء</th>
+                <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -639,28 +648,28 @@ window.showCreateLessonForm = function() {
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Create New Lesson</h2>
+        <h2>إضافة درس جديد</h2>
         <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
       </div>
       <form id="create-lesson-form">
         <div class="form-group">
-          <label for="lesson-title">Lesson Title *</label>
+          <label for="lesson-title">عنوان الدرس *</label>
           <input type="text" id="lesson-title" required autofocus>
         </div>
         <div class="form-group">
-          <label for="lesson-unit">Unit *</label>
+          <label for="lesson-unit">الوحدة الدراسية *</label>
           <select id="lesson-unit" required>
-            <option value="">Select a unit...</option>
+            <option value="">اختر وحدة دراسية...</option>
             ${unitOptions}
           </select>
         </div>
         <div class="form-group">
-          <label for="lesson-content">Lesson Content</label>
-          <textarea id="lesson-content" placeholder="Enter lesson content here..."></textarea>
+          <label for="lesson-content">محتوى الدرس</label>
+          <textarea id="lesson-content" placeholder="Enter محتوى الدرس here..."></textarea>
         </div>
         <div class="btn-group">
-          <button type="submit" class="btn btn-success">Create Lesson</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="submit" class="btn btn-success">حفظ الدرس</button>
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
         </div>
       </form>
     </div>
@@ -677,7 +686,7 @@ window.showCreateLessonForm = function() {
       });
       modal.remove();
       router.navigate('/admin/lessons');
-      showAlert('Lesson created successfully!');
+      showAlert('تم إضافة الدرس بنجاح!');
     } catch (error) {
       showAlert(error.message, 'error');
     }
@@ -696,27 +705,27 @@ window.editLesson = async function(id) {
     modal.innerHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h2>Edit Lesson</h2>
+          <h2>تعديل الدرس</h2>
           <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
         </div>
         <form id="edit-lesson-form">
           <div class="form-group">
-            <label for="edit-lesson-title">Lesson Title *</label>
+            <label for="edit-lesson-title">عنوان الدرس *</label>
             <input type="text" id="edit-lesson-title" value="${escapeHtml(lesson.title)}" required autofocus>
           </div>
           <div class="form-group">
-            <label for="edit-lesson-unit">Unit *</label>
+            <label for="edit-lesson-unit">الوحدة الدراسية *</label>
             <select id="edit-lesson-unit" required>
               ${unitOptions}
             </select>
           </div>
           <div class="form-group">
-            <label for="edit-lesson-content">Lesson Content</label>
+            <label for="edit-lesson-content">محتوى الدرس</label>
             <textarea id="edit-lesson-content">${escapeHtml(lesson.content || '')}</textarea>
           </div>
           <div class="btn-group">
-            <button type="submit" class="btn btn-primary">Update Lesson</button>
-            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+            <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
           </div>
         </form>
       </div>
@@ -733,7 +742,7 @@ window.editLesson = async function(id) {
         });
         modal.remove();
         router.navigate('/admin/lessons');
-        showAlert('Lesson updated successfully!');
+        showAlert('تم تحديث الدرس بنجاح!');
       } catch (error) {
         showAlert(error.message, 'error');
       }
@@ -744,14 +753,14 @@ window.editLesson = async function(id) {
 };
 
 window.deleteLesson = async function(id, title) {
-  if (!confirm(`Are you sure you want to delete "${title}"?`)) {
+  if (!confirm(`هل أنت متأكد من حذف "${title}"?`)) {
     return;
   }
   
   try {
     await adminApi.delete(`/api/lessons/${id}`);
     router.navigate('/admin/lessons');
-    showAlert('Lesson deleted successfully!');
+    showAlert('تم حذف الدرس بنجاح!');
   } catch (error) {
     showAlert(error.message, 'error');
   }
@@ -764,3 +773,4 @@ window.addEventListener('popstate', () => {
 
 // Initial route
 router.handleRoute();
+

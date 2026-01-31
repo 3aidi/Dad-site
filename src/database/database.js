@@ -1,7 +1,10 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(__dirname, '../../database.db');
+// Use persistent disk in production, local file in development
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? '/opt/render/project/data/database.db'
+  : path.join(__dirname, '../../database.db');
 
 class Database {
   constructor() {

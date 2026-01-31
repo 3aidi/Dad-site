@@ -122,6 +122,9 @@ const adminApi = {
 const router = new AdminRouter();
 const app = document.getElementById('admin-app');
 
+console.log('Admin app element:', app);
+console.log('Router initialized:', router);
+
 // Utility Functions
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -191,6 +194,13 @@ async function logout() {
 
 // Login Page
 router.on('/admin/login', async () => {
+  console.log('Login route triggered, app element:', app);
+  
+  if (!app) {
+    console.error('Admin app element not found!');
+    return;
+  }
+  
   app.innerHTML = `
     <div class="login-container">
       <div class="login-box">
@@ -766,10 +776,13 @@ window.addEventListener('popstate', () => {
 
 // Initial route - wait for DOM to be ready
 if (document.readyState === 'loading') {
+  console.log('Waiting for DOM...');
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM ready, handling route...');
     router.handleRoute();
   });
 } else {
+  console.log('DOM already ready, handling route...');
   router.handleRoute();
 }
 

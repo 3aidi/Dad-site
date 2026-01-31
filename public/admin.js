@@ -270,7 +270,7 @@ router.on('/admin/dashboard', async () => {
             <div class="number">${lessons.length}</div>
           </div>
         </div>
-        <div class="quick-الإجراءات">
+        <div class="quick-actions">
           <h3>إجراءات سريعة</h3>
           <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="router.navigate('/admin/classes')"><i class="fas fa-book-open"></i> إدارة الصفوف</button>
@@ -295,8 +295,8 @@ router.on('/admin/classes', async () => {
       : classes.map(cls => `
           <tr>
             <td>${escapeHtml(cls.name)}</td>
-            <td>${new Date(cls.تاريخ الإنشاء_at).toLocaleDateString('ar-EG')}</td>
-            <td class="table-الإجراءات">
+            <td>${new Date(cls.created_at).toLocaleDateString('ar-EG')}</td>
+            <td class="table-actions">
               <button class="btn btn-sm btn-secondary" onclick="editClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
               <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
@@ -436,8 +436,8 @@ router.on('/admin/units', async () => {
           <tr>
             <td>${escapeHtml(unit.title)}</td>
             <td>${escapeHtml(unit.class_name)}</td>
-            <td>${new Date(unit.تاريخ الإنشاء_at).toLocaleDateString()}</td>
-            <td class="table-الإجراءات">
+            <td>${new Date(unit.created_at).toLocaleDateString('ar-EG')}</td>
+            <td class="table-actions">
               <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}', ${unit.class_id})">تعديل</button>
               <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}')">حذف</button>
             </td>
@@ -603,8 +603,8 @@ router.on('/admin/lessons', async () => {
             <td>${escapeHtml(lesson.title)}</td>
             <td>${escapeHtml(lesson.unit_title)}</td>
             <td>${escapeHtml(lesson.class_name)}</td>
-            <td>${new Date(lesson.تاريخ الإنشاء_at).toLocaleDateString()}</td>
-            <td class="table-الإجراءات">
+            <td>${new Date(lesson.created_at).toLocaleDateString()}</td>
+            <td class="table-actions">
               <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})">تعديل</button>
               <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml(lesson.title).replace(/'/g, "\\'")}')">حذف</button>
             </td>
@@ -785,4 +785,5 @@ if (document.readyState === 'loading') {
   console.log('DOM already ready, handling route...');
   router.handleRoute();
 }
+
 

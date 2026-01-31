@@ -32,6 +32,10 @@ body {
   direction: rtl;
   background-color: var(--light-bg);
 }
+  color: var(--text-color);
+  direction: rtl;
+  background-color: var(--light-bg);
+}
 
 /* Login Page */
 .login-container {

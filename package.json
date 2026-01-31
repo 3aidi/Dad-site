@@ -1,0 +1,28 @@
+{
+  "name": "educational-content-system",
+  "version": "1.0.0",
+  "description": "Secure educational content management system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "init-db": "node src/database/initDatabase.js",
+    "generate-secrets": "node generate-secrets.js"
+  },
+  "keywords": [
+    "education",
+    "cms",
+    "content-management"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.6"
+  }
+}

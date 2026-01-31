@@ -41,7 +41,7 @@ class AdminRouter {
   async handleRoute() {
     const path = window.location.pathname;
 
-    if (path === '/admin/login' || path === '/admin') {
+    if (path === '/admin/login' || path === '/admin' || path === '/admin.html') {
       this.routes['/admin/login']?.();
     } else if (path === '/admin/dashboard') {
       this.routes['/admin/dashboard']?.();

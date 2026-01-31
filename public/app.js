@@ -55,7 +55,8 @@ class Router {
     const app = document.getElementById('app');
     app.innerHTML = `
       <div class="error">
-        <h3>Error</h3>
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ</h3>
         <p>${message}</p>
       </div>
     `;
@@ -80,17 +81,17 @@ const app = document.getElementById('app');
 // Home Page
 router.on('/', async () => {
   app.innerHTML = `
-    <h1 class="page-title">Welcome to Educational Content System</h1>
-    <p class="page-subtitle">Browse our comprehensive collection of teaching materials organized by classes, units, and lessons.</p>
+    <h1 class="page-title">مرحبًا بكم في منصة المحتوى التعليمي الرقمي</h1>
+    <p class="page-subtitle">استعرضوا مجموعتنا الشاملة من المواد التعليمية المنظمة بعناية حسب الصفوف الدراسية والوحدات والدروس</p>
     
     <div class="cards-grid">
       <div class="card" onclick="router.navigate('/classes')">
-        <h3>📚 Browse Classes</h3>
-        <p>Explore all available classes and their content</p>
+        <h3>الصفوف الدراسية</h3>
+        <p>استكشفوا جميع الصفوف الدراسية المتاحة ومحتوياتها التعليمية المتميزة</p>
       </div>
       <div class="card" style="cursor: default; opacity: 0.7;">
-        <h3>ℹ️ About</h3>
-        <p>This is a content presentation system for educational materials</p>
+        <h3>حول المنصة</h3>
+        <p>نظام عرض محتوى تعليمي رقمي متطور مصمم لتقديم أفضل تجربة تعليمية</p>
       </div>
     </div>
   `;
@@ -99,17 +100,17 @@ router.on('/', async () => {
 // Classes List Page
 router.on('/classes', async () => {
   try {
-    app.innerHTML = '<div class="loading">Loading classes...</div>';
+    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الصفوف الدراسية...</span></div>';
     
     const classes = await api.get('/api/classes');
     
     if (classes.length === 0) {
       app.innerHTML = `
-        <h1 class="page-title">Classes</h1>
+        <h1 class="page-title">الصفوف الدراسية</h1>
         <div class="empty-state">
-          <div class="empty-state-icon">📚</div>
-          <h3>No classes available yet</h3>
-          <p>Check back later for new content</p>
+          <div class="empty-state-icon"><i class="fas fa-book-open"></i></div>
+          <h3>لا توجد صلوف دراسية متاحة حاليًا</h3>
+          <p>يرجى العودة لاحقًا للاطلاع على المحتوى الجديد</p>
         </div>
       `;
       return;
@@ -118,13 +119,13 @@ router.on('/classes', async () => {
     const classesHTML = classes.map(cls => `
       <div class="card" onclick="router.navigate('/class/${cls.id}')">
         <h3>${escapeHtml(cls.name)}</h3>
-        <p>Click to view units</p>
+        <p>اضغط لعرض الوحدات الدراسية</p>
       </div>
     `).join('');
 
     app.innerHTML = `
-      <h1 class="page-title">Classes</h1>
-      <p class="page-subtitle">Select a class to view its units and lessons</p>
+      <h1 class="page-title">الصفوف الدراسية</h1>
+      <p class="page-subtitle">اختر صفًا دراسيًا لعرض وحداته ودروسه</p>
       <div class="cards-grid">
         ${classesHTML}
       </div>
@@ -132,7 +133,8 @@ router.on('/classes', async () => {
   } catch (error) {
     app.innerHTML = `
       <div class="error">
-        <h3>Error loading classes</h3>
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ في تحميل الصفوف</h3>
         <p>${error.message}</p>
       </div>
     `;
@@ -142,7 +144,7 @@ router.on('/classes', async () => {
 // Class Detail Page (Units)
 router.on('/class/:id', async (classId) => {
   try {
-    app.innerHTML = '<div class="loading">Loading units...</div>';
+    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الوحدات...</span></div>';
     
     const [classData, units] = await Promise.all([
       api.get(`/api/classes/${classId}`),
@@ -151,8 +153,8 @@ router.on('/class/:id', async (classId) => {
 
     const breadcrumbs = `
       <div class="breadcrumbs">
-        <a href="/classes">Classes</a>
-        <span>›</span>
+        <a href="/classes"><i class="fas fa-book-open"></i> الصفوف الدراسية</a>
+        <span>«</span>
         <span>${escapeHtml(classData.name)}</span>
       </div>
     `;
@@ -162,9 +164,9 @@ router.on('/class/:id', async (classId) => {
         ${breadcrumbs}
         <h1 class="page-title">${escapeHtml(classData.name)}</h1>
         <div class="empty-state">
-          <div class="empty-state-icon">📖</div>
-          <h3>No units available yet</h3>
-          <p>This class doesn't have any units yet</p>
+          <div class="empty-state-icon"><i class="fas fa-folder-open"></i></div>
+          <h3>لا توجد وحدات دراسية متاحة حاليًا</h3>
+          <p>هذا الصف لا يحتوي على وحدات دراسية بعد</p>
         </div>
       `;
       return;
@@ -172,15 +174,19 @@ router.on('/class/:id', async (classId) => {
 
     const unitsHTML = units.map(unit => `
       <div class="list-item" onclick="router.navigate('/unit/${unit.id}')">
-        <h3>${escapeHtml(unit.title)}</h3>
-        <span class="arrow">→</span>
+        <div>
+          <h4>${escapeHtml(unit.title)}</h4>
+        </div>
+        <div class="list-item-icon">
+          <i class="fas fa-chevron-left"></i>
+        </div>
       </div>
     `).join('');
 
     app.innerHTML = `
       ${breadcrumbs}
       <h1 class="page-title">${escapeHtml(classData.name)}</h1>
-      <p class="page-subtitle">Select a unit to view its lessons</p>
+      <p class="page-subtitle">اختر وحدة دراسية لعرض دروسها</p>
       <div class="list-view">
         ${unitsHTML}
       </div>
@@ -188,7 +194,8 @@ router.on('/class/:id', async (classId) => {
   } catch (error) {
     app.innerHTML = `
       <div class="error">
-        <h3>Error loading units</h3>
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ في تحميل الوحدات</h3>
         <p>${error.message}</p>
       </div>
     `;
@@ -198,7 +205,7 @@ router.on('/class/:id', async (classId) => {
 // Unit Detail Page (Lessons)
 router.on('/unit/:id', async (unitId) => {
   try {
-    app.innerHTML = '<div class="loading">Loading lessons...</div>';
+    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الدروس...</span></div>';
     
     const [unit, lessons] = await Promise.all([
       api.get(`/api/units/${unitId}`),
@@ -210,10 +217,10 @@ router.on('/unit/:id', async (unitId) => {
 
     const breadcrumbs = `
       <div class="breadcrumbs">
-        <a href="/classes">Classes</a>
-        <span>›</span>
+        <a href="/classes"><i class="fas fa-book-open"></i> الصفوف</a>
+        <span>«</span>
         <a href="/class/${classData.id}">${escapeHtml(classData.name)}</a>
-        <span>›</span>
+        <span>«</span>
         <span>${escapeHtml(unit.title)}</span>
       </div>
     `;
@@ -223,9 +230,9 @@ router.on('/unit/:id', async (unitId) => {
         ${breadcrumbs}
         <h1 class="page-title">${escapeHtml(unit.title)}</h1>
         <div class="empty-state">
-          <div class="empty-state-icon">📄</div>
-          <h3>No lessons available yet</h3>
-          <p>This unit doesn't have any lessons yet</p>
+          <div class="empty-state-icon"><i class="fas fa-file-alt"></i></div>
+          <h3>لا توجد دروس متاحة حاليًا</h3>
+          <p>هذه الوحدة لا تحتوي على دروس بعد</p>
         </div>
       `;
       return;
@@ -233,15 +240,19 @@ router.on('/unit/:id', async (unitId) => {
 
     const lessonsHTML = lessons.map(lesson => `
       <div class="list-item" onclick="router.navigate('/lesson/${lesson.id}')">
-        <h3>${escapeHtml(lesson.title)}</h3>
-        <span class="arrow">→</span>
+        <div>
+          <h4>${escapeHtml(lesson.title)}</h4>
+        </div>
+        <div class="list-item-icon">
+          <i class="fas fa-chevron-left"></i>
+        </div>
       </div>
     `).join('');
 
     app.innerHTML = `
       ${breadcrumbs}
       <h1 class="page-title">${escapeHtml(unit.title)}</h1>
-      <p class="page-subtitle">Select a lesson to view its content</p>
+      <p class="page-subtitle">اختر درسًا لعرض محتواه</p>
       <div class="list-view">
         ${lessonsHTML}
       </div>
@@ -249,7 +260,8 @@ router.on('/unit/:id', async (unitId) => {
   } catch (error) {
     app.innerHTML = `
       <div class="error">
-        <h3>Error loading lessons</h3>
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ في تحميل الدروس</h3>
         <p>${error.message}</p>
       </div>
     `;
@@ -259,7 +271,7 @@ router.on('/unit/:id', async (unitId) => {
 // Lesson Content Page
 router.on('/lesson/:id', async (lessonId) => {
   try {
-    app.innerHTML = '<div class="loading">Loading lesson...</div>';
+    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الدرس...</span></div>';
     
     const lesson = await api.get(`/api/lessons/${lessonId}`);
     const unit = await api.get(`/api/units/${lesson.unit_id}`);
@@ -267,19 +279,19 @@ router.on('/lesson/:id', async (lessonId) => {
 
     const breadcrumbs = `
       <div class="breadcrumbs">
-        <a href="/classes">Classes</a>
-        <span>›</span>
+        <a href="/classes"><i class="fas fa-book-open"></i> الصفوف</a>
+        <span>«</span>
         <a href="/class/${classData.id}">${escapeHtml(classData.name)}</a>
-        <span>›</span>
+        <span>«</span>
         <a href="/unit/${unit.id}">${escapeHtml(unit.title)}</a>
-        <span>›</span>
+        <span>«</span>
         <span>${escapeHtml(lesson.title)}</span>
       </div>
     `;
 
     const content = lesson.content 
       ? lesson.content.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('') 
-      : '<p><em>No content available for this lesson yet.</em></p>';
+      : '<p><em>لا يوجد محتوى متاح لهذا الدرس حاليًا.</em></p>';
 
     app.innerHTML = `
       ${breadcrumbs}
@@ -291,7 +303,8 @@ router.on('/lesson/:id', async (lessonId) => {
   } catch (error) {
     app.innerHTML = `
       <div class="error">
-        <h3>Error loading lesson</h3>
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ في تحميل الدرس</h3>
         <p>${error.message}</p>
       </div>
     `;

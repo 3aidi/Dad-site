@@ -81,7 +81,7 @@ const app = document.getElementById('app');
 // Home Page
 router.on('/', async () => {
   app.innerHTML = `
-    <h1 class="page-title">مرحبًا بكم في منصة المحتوى التعليمي الرقمي</h1>
+    <h1 class="page-title">مرحبًا بكم في منصة الأستاذ سعد عبد الفتاح العايدي التعليمية</h1>
     <p class="page-subtitle">استعرضوا مجموعتنا الشاملة من المواد التعليمية المنظمة بعناية حسب الصفوف الدراسية والوحدات والدروس</p>
     
     <div class="cards-grid">
@@ -91,7 +91,7 @@ router.on('/', async () => {
       </div>
       <div class="card" style="cursor: default; opacity: 0.7;">
         <h3>حول المنصة</h3>
-        <p>نظام عرض محتوى تعليمي رقمي متطور مصمم لتقديم أفضل تجربة تعليمية</p>
+        <p>منصة تعليمية متطورة مصممة من قبل الأستاذ سعد عبد الفتاح العايدي لتقديم أفضل تجربة تعليمية</p>
       </div>
     </div>
   `;

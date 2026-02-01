@@ -154,7 +154,7 @@ function adminLayout(content, activeNav) {
           <div class="logo">
             <i class="fas fa-graduation-cap"></i>
           </div>
-          <h2>لوحة التحكم</h2>
+          <h2>الأستاذ سعد العايدي</h2>
           <p>إدارة المحتوى التعليمي</p>
         </div>
         <nav>

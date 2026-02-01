@@ -296,7 +296,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
 router.post('/upload-image', authenticateToken, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided' });
+      return res.status(400).json({ error: 'لم يتم توفير ملف صورة', code: 'NO_FILE' });
+    }
+
+    // Verify Cloudinary config
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
+      return res.status(500).json({ error: 'خطأ في إعدادات الخادم', code: 'MISSING_CONFIG' });
     }
 
     const uploadFromBuffer = () => new Promise((resolve, reject) => {
@@ -306,7 +311,10 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
           resource_type: 'image'
         },
         (error, result) => {
-          if (error) return reject(error);
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            return reject(error);
+          }
           resolve(result);
         }
       );
@@ -314,11 +322,13 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
     });
 
     const result = await uploadFromBuffer();
-
     res.json({ imagePath: result.secure_url });
   } catch (error) {
-    console.error('Error uploading image:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error uploading image:', error.message);
+    res.status(500).json({ 
+      error: 'فشل تحميل الصورة: ' + (error.message || 'خطأ غير معروف'),
+      code: 'UPLOAD_ERROR'
+    });
   }
 });
 

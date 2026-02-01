@@ -1081,6 +1081,12 @@ window.uploadImage = async function(input, event) {
   const file = input.files[0];
   if (!file) return;
 
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    showAlert('الرجاء اختيار ملف صورة صحيح', 'error');
+    return;
+  }
+
   const formData = new FormData();
   formData.append('image', file);
 
@@ -1090,11 +1096,12 @@ window.uploadImage = async function(input, event) {
       body: formData
     });
 
+    const data = await safeParseJson(response);
+
     if (!response.ok) {
-      throw new Error('Upload failed');
+      throw new Error(data.error || 'فشل تحميل الصورة');
     }
 
-    const data = await safeParseJson(response);
     const imageField = input.closest('[data-image-index]');
     imageField.setAttribute('data-image-path', data.imagePath);
     
@@ -1109,6 +1116,7 @@ window.uploadImage = async function(input, event) {
     
     showAlert('تم رفع الصورة بنجاح!');
   } catch (error) {
+    console.error('Image upload error:', error);
     showAlert('خطأ في رفع الصورة: ' + error.message, 'error');
   }
 };

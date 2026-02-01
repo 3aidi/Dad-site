@@ -77,7 +77,9 @@ const api = {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error('فشل تحميل البيانات');
+        const errorData = await response.json().catch(() => ({ error: 'خطأ في السيرفر' }));
+        const errorMsg = errorData.error || `خطأ HTTP ${response.status}`;
+        throw new Error(errorMsg);
       }
       return response.json();
     } catch (error) {
@@ -85,6 +87,7 @@ const api = {
       if (error.name === 'AbortError') {
         throw new Error('انتهت مهلة الاتصال');
       }
+      console.error('API Error:', url, error.message);
       throw error;
     }
   }

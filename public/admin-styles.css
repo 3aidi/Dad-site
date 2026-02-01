@@ -111,14 +111,16 @@ body {
 .admin-layout {
   display: flex;
   min-height: 100vh;
+  direction: rtl;
 }
 
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
   padding: 1.5rem 0;
   position: fixed;
+  right: 0;
   height: 100vh;
   overflow-y: auto;
 }
@@ -201,7 +203,7 @@ body {
 }
 
 .admin-main {
-  margin-left: var(--sidebar-width);
+  margin-right: var(--sidebar-width);
   flex: 1;
   padding: 2rem;
   background-color: var(--light-bg);
@@ -382,7 +384,7 @@ table {
 table th,
 table td {
   padding: 1rem;
-  text-align: left;
+  text-align: right;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -511,7 +513,7 @@ table tr:hover {
   }
 
   .admin-main {
-    margin-left: 0;
+    margin-right: 0;
   }
 
   .table-container {

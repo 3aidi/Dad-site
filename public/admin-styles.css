@@ -43,20 +43,9 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: var(--gradient-primary);
+  background: #f1f5f9;
   position: relative;
   overflow: hidden;
-}
-
-.login-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)" /></svg>');
-  opacity: 0.5;
 }
 
 .login-box {
@@ -74,7 +63,7 @@ body {
 .login-box .logo {
   width: 90px;
   height: 90px;
-  background: var(--gradient-gold);
+  background: var(--primary-color);
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -82,13 +71,12 @@ body {
   margin: 0 auto 1.5rem;
   font-size: 2.75rem;
   color: white;
-  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
-  transform: rotate(-5deg);
+  box-shadow: 0 8px 20px rgba(30, 58, 138, 0.15);
   transition: transform 0.3s ease;
 }
 
 .login-box .logo:hover {
-  transform: rotate(0deg) scale(1.05);
+  transform: scale(1.05);
 }
 
 .login-box h1 {

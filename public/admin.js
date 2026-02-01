@@ -208,7 +208,7 @@ router.on('/admin/login', async () => {
           <i class="fas fa-graduation-cap"></i>
         </div>
         <h1>تسجيل الدخول</h1>
-        <p>لوحة التحكم - منصة المحتوى التعليمي الرقمي</p>
+        <p>لوحة تحكم الأستاذ سعد العايدي</p>
         <form id="login-form">
           <div class="form-group">
             <label for="username"><i class="fas fa-user"></i> اسم المستخدم</label>

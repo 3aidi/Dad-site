@@ -736,7 +736,40 @@ table tr:hover {
 .loading {
   text-align: center;
   padding: 3rem;
-  color: var(--secondary-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.loading i {
+  font-size: 2.5rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-pulse 2s ease-in-out infinite;
+}
+
+.loading span {
+  color: var(--primary-color);
+  font-weight: 600;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes gradient-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 /* Empty State */

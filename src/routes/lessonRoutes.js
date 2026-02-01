@@ -7,11 +7,16 @@ const streamifier = require('streamifier');
 
 const router = express.Router();
 
+// Configure Cloudinary with environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+console.log('Cloudinary Config - Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME ? '✓ Set' : '✗ Missing');
+console.log('Cloudinary Config - API Key:', process.env.CLOUDINARY_API_KEY ? '✓ Set' : '✗ Missing');
+console.log('Cloudinary Config - API Secret:', process.env.CLOUDINARY_API_SECRET ? '✓ Set' : '✗ Missing');
 
 // Configure multer for image uploads (memory storage for Cloudinary)
 const upload = multer({
@@ -299,10 +304,7 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
       return res.status(400).json({ error: 'لم يتم توفير ملف صورة', code: 'NO_FILE' });
     }
 
-    // Verify Cloudinary config
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
-      return res.status(500).json({ error: 'خطأ في إعدادات الخادم', code: 'MISSING_CONFIG' });
-    }
+    console.log('Uploading image:', req.file.originalname, 'Size:', req.file.size);
 
     const uploadFromBuffer = () => new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -312,19 +314,21 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
         },
         (error, result) => {
           if (error) {
-            console.error('Cloudinary upload error:', error);
+            console.error('Cloudinary error:', error.message);
             return reject(error);
           }
+          console.log('Image uploaded successfully:', result.secure_url);
           resolve(result);
         }
       );
+      
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     });
 
     const result = await uploadFromBuffer();
     res.json({ imagePath: result.secure_url });
   } catch (error) {
-    console.error('Error uploading image:', error.message);
+    console.error('Error uploading image:', error.message || error);
     res.status(500).json({ 
       error: 'فشل تحميل الصورة: ' + (error.message || 'خطأ غير معروف'),
       code: 'UPLOAD_ERROR'

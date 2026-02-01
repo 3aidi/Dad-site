@@ -14,9 +14,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-console.log('Cloudinary Config - Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME ? '✓ Set' : '✗ Missing');
-console.log('Cloudinary Config - API Key:', process.env.CLOUDINARY_API_KEY ? '✓ Set' : '✗ Missing');
-console.log('Cloudinary Config - API Secret:', process.env.CLOUDINARY_API_SECRET ? '✓ Set' : '✗ Missing');
+console.log('Cloudinary Config - Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME ? `✓ Set (${process.env.CLOUDINARY_CLOUD_NAME})` : '✗ Missing');
+console.log('Cloudinary Config - API Key:', process.env.CLOUDINARY_API_KEY ? `✓ Set (${process.env.CLOUDINARY_API_KEY.substring(0, 8)}...)` : '✗ Missing');
+console.log('Cloudinary Config - API Secret:', process.env.CLOUDINARY_API_SECRET ? `✓ Set (${process.env.CLOUDINARY_API_SECRET.substring(0, 8)}...)` : '✗ Missing');
 
 // Configure multer for image uploads (memory storage for Cloudinary)
 const upload = multer({
@@ -306,19 +306,18 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
 
     console.log('Uploading image:', req.file.originalname, 'Size:', req.file.size);
     
-    // Ensure Cloudinary is configured with latest env vars
+    // Configure with explicit hardcoded credentials
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET
+      cloud_name: 'dm0srrhnh',
+      api_key: '823123349873943',
+      api_secret: '2802Hvdcyq4ZFDsF5kE7ZY9dELw'
     });
 
     const uploadFromBuffer = () => new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'educational-content-system/lesson-images',
-          resource_type: 'image',
-          api_key: process.env.CLOUDINARY_API_KEY
+          resource_type: 'image'
         },
         (error, result) => {
           if (error) {

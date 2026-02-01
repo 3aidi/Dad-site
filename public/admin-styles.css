@@ -169,9 +169,6 @@ body {
   box-shadow: 0 16px 40px rgba(30, 58, 138, 0.18);
   border-color: #2563eb;
 }
-  border: 4px solid rgb(255, 255, 255);
-  box-shadow: rgba(133, 189, 215, 0.8784313725) 0px 30px 30px -20px;
-}
 
 .login-container .heading {
   text-align: center;
@@ -351,19 +348,26 @@ body {
   padding: 1.5rem;
   border-top: 1px solid var(--border-color);
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  direction: rtl;
+  text-align: right;
 }
 
 .sidebar-footer p {
-  margin: 0 0 0.75rem 0;
+  margin: 0;
   font-size: 0.875rem;
   color: var(--light-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: right;
 }
 
 .teacher-badge-admin {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: #1e293b;
@@ -377,7 +381,8 @@ body {
   position: relative;
   overflow: hidden;
   width: 100%;
-  justify-content: center;
+  direction: rtl;
+  flex-direction: row-reverse;
 }
 
 .teacher-badge-admin span {
@@ -526,14 +531,32 @@ body {
 }
 
 .btn-primary {
-  background-color: var(--secondary-color);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
 }
 
 .btn-primary:hover {
-  background-color: #0f9d8b;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
 }
 
 .btn-success {
@@ -547,15 +570,78 @@ body {
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
+.logout-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  color: #ef4444;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid #ef4444;
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.15);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  direction: rtl;
+  flex-direction: row-reverse;
+}
+
+.logout-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent);
+  transition: left 0.6s;
+}
+
+.logout-badge:hover::before {
+  left: 100%;
+}
+
+.logout-badge:hover {
+  background: linear-gradient(135deg, #fef2f2 0%, #fde8e8 100%);
+  border-color: #dc2626;
+  box-shadow: 0 15px 35px rgba(239, 68, 68, 0.25);
+  transform: translateY(-2px);
+}
+
 .btn-danger {
-  background-color: var(--danger-color);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  border-radius: 50px;
+}
+
+.btn-danger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s;
+}
+
+.btn-danger:hover::before {
+  left: 100%;
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
 }
 
 .btn-secondary {
@@ -641,9 +727,9 @@ table tr:hover {
 }
 
 .alert-info {
-  background-color: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
+  background-color: #dbeafe;
+  color: #0c4a87;
+  border: 1px solid #bfdbfe;
 }
 
 /* Loading */
@@ -661,8 +747,10 @@ table tr:hover {
 }
 
 .empty-state-icon {
-  font-size: 3rem;
+  font-size: 3.5rem;
   margin-bottom: 1rem;
+  color: #2563eb;
+  opacity: 0.7;
 }
 
 /* Modal */

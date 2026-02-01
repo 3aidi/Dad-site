@@ -232,13 +232,13 @@ function adminLayout(content, activeNav) {
             <i class="fas fa-file-alt"></i> الدروس
           </a>
         </nav>
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" dir="rtl">
           <p>مسجل الدخول:</p>
           <div class="teacher-badge-admin">
-            <i class="fas fa-user-tie"></i>
             <span>${router.currentUser?.username || 'مدير'}</span>
+            <i class="fas fa-user-tie"></i>
           </div>
-          <button class="btn btn-danger btn-block btn-sm" style="margin-top: 1rem;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+          <button class="logout-badge" onclick="logout()">تسجيل الخروج <i class="fas fa-sign-out-alt"></i></button>
         </div>
       </aside>
       <main class="admin-main">
@@ -374,7 +374,7 @@ router.on('/admin/classes', async () => {
     const classes = await adminApi.get('/api/classes');
 
     const tableRows = classes.length === 0 
-      ? '<tr><td colspan="3" class="empty-state"><div class="empty-state-icon">📚</div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></td></tr>'
+      ? '<tr><td colspan="3" class="empty-state"><div class="empty-state-icon"><i class="fas fa-book"></i></div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></td></tr>'
       : classes.map(cls => `
           <tr>
             <td>${escapeHtml(cls.name || cls.name_ar)}</td>
@@ -587,7 +587,7 @@ router.on('/admin/units', async () => {
     window.availableClasses = classes;
 
     const tableRows = units.length === 0 
-      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon">📖</div><p>لا توجد وحدات دراسية بعد. قم بإنشاء وحدة دراسية أولى!</p></td></tr>'
+      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon"><i class="fas fa-folder"></i></div><p>لا توجد وحدات دراسية بعد. قم بإنشاء وحدة دراسية أولى!</p></td></tr>'
       : units.map(unit => `
           <tr>
             <td>${escapeHtml(unit.title || unit.title_ar)}</td>
@@ -603,7 +603,7 @@ router.on('/admin/units', async () => {
     app.innerHTML = adminLayout(`
       <div class="admin-header">
         <h1>إدارة الوحدات الدراسية</h1>
-        <button class="btn btn-success" onclick="showCreateUnitForm()">وحدة جديدة</button>
+        <button class="btn btn-primary" onclick="showCreateUnitForm()"><i class="fas fa-plus"></i> وحدة جديدة</button>
       </div>
       <div class="admin-content">
         ${classes.length === 0 ? '<div class="alert alert-info">قم بإنشاء صف دراسي أولا قبل إضافة الوحدات.</div>' : ''}
@@ -835,7 +835,7 @@ router.on('/admin/lessons', async () => {
     window.availableUnits = units;
 
     const tableRows = lessons.length === 0 
-      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📄</div><p>لا توجد دروس بعد. قم بإنشاء درس أول!</p></td></tr>'
+      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><p>لا توجد دروس بعد. قم بإنشاء درس أول!</p></td></tr>'
       : lessons.map(lesson => `
           <tr>
             <td>${escapeHtml(lesson.title || lesson.title_ar)}</td>
@@ -852,7 +852,7 @@ router.on('/admin/lessons', async () => {
     app.innerHTML = adminLayout(`
       <div class="admin-header">
         <h1>إدارة الدروس</h1>
-        <button class="btn btn-success" onclick="showCreateLessonForm()">درس جديد</button>
+        <button class="btn btn-primary" onclick="showCreateLessonForm()"><i class="fas fa-plus"></i> درس جديد</button>
       </div>
       <div class="admin-content">
         ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا قبل إضافة الدروس.</div>' : ''}

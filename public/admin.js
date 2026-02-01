@@ -27,7 +27,7 @@ class AdminRouter {
   async checkAuth() {
     try {
       const response = await fetch('/api/auth/verify');
-      const data = await response.json();
+      const data = await safeParseJson(response);
       if (data.authenticated) {
         this.currentUser = data.admin;
         return true;
@@ -57,6 +57,19 @@ class AdminRouter {
   }
 }
 
+function safeParseJson(response) {
+  return response.text().then(text => {
+    if (!text) {
+      return response.ok ? {} : null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return response.ok ? {} : null;
+    }
+  });
+}
+
 // API Helper
 const adminApi = {
   async get(url) {
@@ -69,7 +82,7 @@ const adminApi = {
       if (!response.ok) {
         throw new Error('فشل تحميل البيانات');
       }
-      return response.json();
+      return safeParseJson(response);
     } catch (error) {
       throw error;
     }
@@ -87,10 +100,10 @@ const adminApi = {
         throw new Error('غير مصرح');
       }
       if (!response.ok) {
-        const error = await response.json();
+        const error = await safeParseJson(response);
         throw new Error(error.error || 'حدث خطأ');
       }
-      return response.json();
+      return safeParseJson(response);
     } catch (error) {
       throw error;
     }
@@ -108,10 +121,10 @@ const adminApi = {
         throw new Error('غير مصرح');
       }
       if (!response.ok) {
-        const error = await response.json();
+        const error = await safeParseJson(response);
         throw new Error(error.error || 'فشل التحديث');
       }
-      return response.json();
+      return safeParseJson(response);
     } catch (error) {
       throw error;
     }
@@ -127,7 +140,7 @@ const adminApi = {
       if (!response.ok) {
         throw new Error('فشل الحذف');
       }
-      return response.json();
+      return safeParseJson(response);
     } catch (error) {
       throw error;
     }
@@ -220,8 +233,12 @@ function adminLayout(content, activeNav) {
           </a>
         </nav>
         <div class="sidebar-footer">
-          <p>مسجل الدخول: <strong>${router.currentUser?.username || 'مدير'}</strong></p>
-          <button class="btn btn-danger btn-block btn-sm" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+          <p>مسجل الدخول:</p>
+          <div class="teacher-badge-admin">
+            <i class="fas fa-user-tie"></i>
+            <span>${router.currentUser?.username || 'مدير'}</span>
+          </div>
+          <button class="btn btn-danger btn-block btn-sm" style="margin-top: 1rem;" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
         </div>
       </aside>
       <main class="admin-main">
@@ -291,14 +308,14 @@ router.on('/admin/login', async () => {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
+        const data = await safeParseJson(response);
         const message = response.status === 401
-          ? 'Wrong password'
+          ? 'كلمة المرور غير صحيحة'
           : (data.error || 'حدث خطأ');
         throw new Error(message);
       }
 
-      await response.json();
+      await safeParseJson(response);
       router.navigate('/admin/dashboard');
     } catch (error) {
       errorDiv.textContent = error.message;
@@ -357,14 +374,14 @@ router.on('/admin/classes', async () => {
     const classes = await adminApi.get('/api/classes');
 
     const tableRows = classes.length === 0 
-      ? '<tr><td colspan="3" class="empty-state"><div class="empty-state-icon">📚</div><p>No classes yet. Create your first class!</p></td></tr>'
+      ? '<tr><td colspan="3" class="empty-state"><div class="empty-state-icon">📚</div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></td></tr>'
       : classes.map(cls => `
           <tr>
-            <td>${escapeHtml(cls.name)}</td>
+            <td>${escapeHtml(cls.name || cls.name_ar)}</td>
             <td>${new Date(cls.created_at).toLocaleDateString('ar-EG')}</td>
             <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
+              <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
           </tr>
         `).join('');
@@ -408,7 +425,11 @@ window.showCreateClassForm = function() {
       <form id="create-class-form">
         <div class="form-group">
           <label for="class-name"><i class="fas fa-book-open"></i> اسم الصف *</label>
-          <input type="text" id="class-name" required autofocus placeholder="مثال: الصف الأول">
+          <input type="text" id="class-name" required autofocus placeholder="مثال: الصف الأول" dir="rtl">
+          <small style="color: #666;">يرجى إدخال اسم الصف بالأحرف العربية فقط</small>
+        </div>
+        <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="class-error">
+          <i class="fas fa-exclamation-circle"></i> <span id="class-error-msg"></span>
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ الصف</button>
@@ -419,17 +440,48 @@ window.showCreateClassForm = function() {
   `;
   document.body.appendChild(modal);
 
+  const classNameInput = document.getElementById('class-name');
+  const errorDiv = document.getElementById('class-error');
+  const errorMsg = document.getElementById('class-error-msg');
+
+  // Real-time Arabic validation
+  classNameInput.addEventListener('input', (e) => {
+    const arabicPattern = /^[\u0600-\u06FF\s]*$/;
+    if (e.target.value && !arabicPattern.test(e.target.value)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+    } else {
+      errorDiv.style.display = 'none';
+    }
+  });
+
   document.getElementById('create-class-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const name = classNameInput.value.trim();
+
+    // Client-side validation
+    if (!name) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'اسم الصف مطلوب';
+      return;
+    }
+
+    const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicPattern.test(name)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
     try {
-      await adminApi.post('/api/classes', {
-        name: document.getElementById('class-name').value
-      });
+      await adminApi.post('/api/classes', { name });
       modal.remove();
       router.navigate('/admin/classes');
       showAlert('تم إضافة الصف بنجاح!');
     } catch (error) {
-      showAlert(error.message, 'error');
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = error.message;
     }
   });
 };
@@ -446,7 +498,11 @@ window.editClass = function(id, name) {
       <form id="edit-class-form">
         <div class="form-group">
           <label for="edit-class-name"><i class="fas fa-book-open"></i> اسم الصف *</label>
-          <input type="text" id="edit-class-name" value="${name}" required autofocus>
+          <input type="text" id="edit-class-name" value="${escapeHtml(name || '')}" required autofocus dir="rtl">
+          <small style="color: #666;">يرجى إدخال اسم الصف بالأحرف العربية فقط</small>
+        </div>
+        <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="edit-class-error">
+          <i class="fas fa-exclamation-circle"></i> <span id="edit-class-error-msg"></span>
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التغييرات</button>
@@ -457,17 +513,48 @@ window.editClass = function(id, name) {
   `;
   document.body.appendChild(modal);
 
+  const classNameInput = document.getElementById('edit-class-name');
+  const errorDiv = document.getElementById('edit-class-error');
+  const errorMsg = document.getElementById('edit-class-error-msg');
+
+  // Real-time Arabic validation
+  classNameInput.addEventListener('input', (e) => {
+    const arabicPattern = /^[\u0600-\u06FF\s]*$/;
+    if (e.target.value && !arabicPattern.test(e.target.value)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+    } else {
+      errorDiv.style.display = 'none';
+    }
+  });
+
   document.getElementById('edit-class-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const nameVal = classNameInput.value.trim();
+
+    // Client-side validation
+    if (!nameVal) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'اسم الصف مطلوب';
+      return;
+    }
+
+    const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicPattern.test(nameVal)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
     try {
-      await adminApi.put(`/api/classes/${id}`, {
-        name: document.getElementById('edit-class-name').value
-      });
+      await adminApi.put(`/api/classes/${id}`, { name: nameVal });
       modal.remove();
       router.navigate('/admin/classes');
       showAlert('تم تحديث الصف بنجاح!');
     } catch (error) {
-      showAlert(error.message, 'error');
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = error.message;
     }
   });
 };
@@ -500,15 +587,15 @@ router.on('/admin/units', async () => {
     window.availableClasses = classes;
 
     const tableRows = units.length === 0 
-      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon">📖</div><p>لا توجد وحدات دراسية بعد. Create your first unit!</p></td></tr>'
+      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon">📖</div><p>لا توجد وحدات دراسية بعد. قم بإنشاء وحدة دراسية أولى!</p></td></tr>'
       : units.map(unit => `
           <tr>
-            <td>${escapeHtml(unit.title)}</td>
+            <td>${escapeHtml(unit.title || unit.title_ar)}</td>
             <td>${escapeHtml(unit.class_name)}</td>
             <td>${new Date(unit.created_at).toLocaleDateString('ar-EG')}</td>
             <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}', ${unit.class_id})">تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml(unit.title).replace(/'/g, "\\'")}')">حذف</button>
+              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}', ${unit.class_id})">تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}')">حذف</button>
             </td>
           </tr>
         `).join('');
@@ -519,7 +606,7 @@ router.on('/admin/units', async () => {
         <button class="btn btn-success" onclick="showCreateUnitForm()">وحدة جديدة</button>
       </div>
       <div class="admin-content">
-        ${classes.length === 0 ? '<div class="alert alert-info">قم بإنشاء صف دراسي أولا before adding units.</div>' : ''}
+        ${classes.length === 0 ? '<div class="alert alert-info">قم بإنشاء صف دراسي أولا قبل إضافة الوحدات.</div>' : ''}
         <div class="table-container">
           <table>
             <thead>
@@ -544,7 +631,7 @@ router.on('/admin/units', async () => {
 
 window.showCreateUnitForm = function() {
   const classOptions = window.availableClasses.map(cls => 
-    `<option value="${cls.id}">${escapeHtml(cls.name)}</option>`
+    `<option value="${cls.id}">${escapeHtml(cls.name || cls.name_ar)}</option>`
   ).join('');
 
   const modal = document.createElement('div');
@@ -558,7 +645,8 @@ window.showCreateUnitForm = function() {
       <form id="create-unit-form">
         <div class="form-group">
           <label for="unit-title">عنوان الوحدة *</label>
-          <input type="text" id="unit-title" required autofocus>
+          <input type="text" id="unit-title" required autofocus placeholder="مثال: الوحدة الأولى" dir="rtl">
+          <small style="color: #666;">يرجى إدخال عنوان الوحدة بالأحرف العربية فقط</small>
         </div>
         <div class="form-group">
           <label for="unit-class">الصف الدراسي *</label>
@@ -566,6 +654,9 @@ window.showCreateUnitForm = function() {
             <option value="">اختر صفا دراسيا...</option>
             ${classOptions}
           </select>
+        </div>
+        <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="unit-error">
+          <i class="fas fa-exclamation-circle"></i> <span id="unit-error-msg"></span>
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-success">حفظ الوحدة</button>
@@ -576,25 +667,63 @@ window.showCreateUnitForm = function() {
   `;
   document.body.appendChild(modal);
 
+  const titleInput = document.getElementById('unit-title');
+  const errorDiv = document.getElementById('unit-error');
+  const errorMsg = document.getElementById('unit-error-msg');
+
+  // Real-time Arabic validation
+  titleInput.addEventListener('input', (e) => {
+    const arabicPattern = /^[\u0600-\u06FF\s]*$/;
+    if (e.target.value && !arabicPattern.test(e.target.value)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+    } else {
+      errorDiv.style.display = 'none';
+    }
+  });
+
   document.getElementById('create-unit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const title = titleInput.value.trim();
+    const classId = document.getElementById('unit-class').value;
+
+    if (!title) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'عنوان الوحدة مطلوب';
+      return;
+    }
+    if (!classId) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'الصف الدراسي مطلوب';
+      return;
+    }
+
+    const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicPattern.test(title)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
     try {
       await adminApi.post('/api/units', {
-        title: document.getElementById('unit-title').value,
-        class_id: document.getElementById('unit-class').value
+        title,
+        class_id: classId
       });
       modal.remove();
       router.navigate('/admin/units');
       showAlert('تم إضافة الوحدة بنجاح!');
     } catch (error) {
-      showAlert(error.message, 'error');
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = error.message;
     }
   });
 };
 
 window.editUnit = function(id, title, classId) {
   const classOptions = window.availableClasses.map(cls => 
-    `<option value="${cls.id}" ${cls.id === classId ? 'selected' : ''}>${escapeHtml(cls.name)}</option>`
+    `<option value="${cls.id}" ${cls.id === classId ? 'selected' : ''}>${escapeHtml(cls.name || cls.name_ar)}</option>`
   ).join('');
 
   const modal = document.createElement('div');
@@ -608,13 +737,17 @@ window.editUnit = function(id, title, classId) {
       <form id="edit-unit-form">
         <div class="form-group">
           <label for="edit-unit-title">عنوان الوحدة *</label>
-          <input type="text" id="edit-unit-title" value="${title}" required autofocus>
+          <input type="text" id="edit-unit-title" value="${escapeHtml(title || '')}" required autofocus dir="rtl">
+          <small style="color: #666;">يرجى إدخال عنوان الوحدة بالأحرف العربية فقط</small>
         </div>
         <div class="form-group">
           <label for="edit-unit-class">الصف الدراسي *</label>
           <select id="edit-unit-class" required>
             ${classOptions}
           </select>
+        </div>
+        <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="edit-unit-error">
+          <i class="fas fa-exclamation-circle"></i> <span id="edit-unit-error-msg"></span>
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
@@ -625,18 +758,51 @@ window.editUnit = function(id, title, classId) {
   `;
   document.body.appendChild(modal);
 
+  const titleInput = document.getElementById('edit-unit-title');
+  const errorDiv = document.getElementById('edit-unit-error');
+  const errorMsg = document.getElementById('edit-unit-error-msg');
+
+  // Real-time Arabic validation
+  titleInput.addEventListener('input', (e) => {
+    const arabicPattern = /^[\u0600-\u06FF\s]*$/;
+    if (e.target.value && !arabicPattern.test(e.target.value)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+    } else {
+      errorDiv.style.display = 'none';
+    }
+  });
+
   document.getElementById('edit-unit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const titleVal = titleInput.value.trim();
+    const classIdVal = document.getElementById('edit-unit-class').value;
+
+    if (!titleVal) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'عنوان الوحدة مطلوب';
+      return;
+    }
+
+    const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicPattern.test(titleVal)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
     try {
       await adminApi.put(`/api/units/${id}`, {
-        title: document.getElementById('edit-unit-title').value,
-        class_id: document.getElementById('edit-unit-class').value
+        title: titleVal,
+        class_id: classIdVal
       });
       modal.remove();
       router.navigate('/admin/units');
       showAlert('تم تحديث الوحدة بنجاح!');
     } catch (error) {
-      showAlert(error.message, 'error');
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = error.message;
     }
   });
 };
@@ -669,16 +835,16 @@ router.on('/admin/lessons', async () => {
     window.availableUnits = units;
 
     const tableRows = lessons.length === 0 
-      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📄</div><p>لا توجد دروس بعد. Create your first lesson!</p></td></tr>'
+      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📄</div><p>لا توجد دروس بعد. قم بإنشاء درس أول!</p></td></tr>'
       : lessons.map(lesson => `
           <tr>
-            <td>${escapeHtml(lesson.title)}</td>
+            <td>${escapeHtml(lesson.title || lesson.title_ar)}</td>
             <td>${escapeHtml(lesson.unit_title)}</td>
             <td>${escapeHtml(lesson.class_name)}</td>
             <td>${new Date(lesson.created_at).toLocaleDateString()}</td>
             <td class="table-actions">
               <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})">تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml(lesson.title).replace(/'/g, "\\'")}')">حذف</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')">حذف</button>
             </td>
           </tr>
         `).join('');
@@ -689,7 +855,7 @@ router.on('/admin/lessons', async () => {
         <button class="btn btn-success" onclick="showCreateLessonForm()">درس جديد</button>
       </div>
       <div class="admin-content">
-        ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا before adding lessons.</div>' : ''}
+        ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا قبل إضافة الدروس.</div>' : ''}
         <div class="table-container">
           <table>
             <thead>
@@ -715,7 +881,7 @@ router.on('/admin/lessons', async () => {
 
 window.showCreateLessonForm = function() {
   const unitOptions = window.availableUnits.map(unit => 
-    `<option value="${unit.id}">${escapeHtml(unit.title)} (${escapeHtml(unit.class_name)})</option>`
+    `<option value="${unit.id}">${escapeHtml(unit.title || unit.title_ar)} (${escapeHtml(unit.class_name)})</option>`
   ).join('');
 
   const modal = document.createElement('div');
@@ -729,7 +895,8 @@ window.showCreateLessonForm = function() {
       <form id="create-lesson-form">
         <div class="form-group">
           <label for="lesson-title">عنوان الدرس *</label>
-          <input type="text" id="lesson-title" required autofocus>
+          <input type="text" id="lesson-title" required autofocus placeholder="مثال: درس الفيزياء" dir="rtl">
+          <small style="color: #666;">يرجى إدخال عنوان الدرس بالأحرف العربية فقط</small>
         </div>
         <div class="form-group">
           <label for="lesson-unit">الوحدة الدراسية *</label>
@@ -750,6 +917,9 @@ window.showCreateLessonForm = function() {
           <button type="button" class="btn btn-secondary btn-sm" onclick="addImageField()">+ إضافة صورة</button>
           <small style="color: #64748b; display: block; margin-top: 0.5rem;">رفع صور من جهازك مع نص توضيحي لكل صورة</small>
         </div>
+        <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="lesson-error">
+          <i class="fas fa-exclamation-circle"></i> <span id="lesson-error-msg"></span>
+        </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-success">حفظ الدرس</button>
           <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
@@ -759,6 +929,21 @@ window.showCreateLessonForm = function() {
   `;
   document.body.appendChild(modal);
 
+  const titleInput = document.getElementById('lesson-title');
+  const errorDiv = document.getElementById('lesson-error');
+  const errorMsg = document.getElementById('lesson-error-msg');
+
+  // Real-time Arabic validation
+  titleInput.addEventListener('input', (e) => {
+    const arabicPattern = /^[\u0600-\u06FF\s]*$/;
+    if (e.target.value && !arabicPattern.test(e.target.value)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+    } else {
+      errorDiv.style.display = 'none';
+    }
+  });
+
   // Initialize with one empty video field
   window.videoFieldCount = 0;
   window.imageFieldCount = 0;
@@ -766,6 +951,28 @@ window.showCreateLessonForm = function() {
 
   document.getElementById('create-lesson-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const title = titleInput.value.trim();
+    const unitId = document.getElementById('lesson-unit').value;
+
+    if (!title) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'عنوان الدرس مطلوب';
+      return;
+    }
+    if (!unitId) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'الوحدة الدراسية مطلوبة';
+      return;
+    }
+
+    const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicPattern.test(title)) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+      return;
+    }
+
     try {
       const videos = [];
       const videoElements = document.querySelectorAll('#videos-container [data-video-index]');
@@ -798,8 +1005,8 @@ window.showCreateLessonForm = function() {
       });
 
       await adminApi.post('/api/lessons', {
-        title: document.getElementById('lesson-title').value,
-        unit_id: document.getElementById('lesson-unit').value,
+        title,
+        unit_id: unitId,
         content: '',
         videos: videos,
         images: images
@@ -808,7 +1015,8 @@ window.showCreateLessonForm = function() {
       router.navigate('/admin/lessons');
       showAlert('تم إضافة الدرس بنجاح!');
     } catch (error) {
-      showAlert(error.message, 'error');
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = error.message;
     }
   });
 };
@@ -886,7 +1094,7 @@ window.uploadImage = async function(input, event) {
       throw new Error('Upload failed');
     }
 
-    const data = await response.json();
+    const data = await safeParseJson(response);
     const imageField = input.closest('[data-image-index]');
     imageField.setAttribute('data-image-path', data.imagePath);
     
@@ -909,7 +1117,7 @@ window.editLesson = async function(id) {
   try {
     const lesson = await adminApi.get(`/api/lessons/${id}`);
     const unitOptions = window.availableUnits.map(unit => 
-      `<option value="${unit.id}" ${unit.id === lesson.unit_id ? 'selected' : ''}>${escapeHtml(unit.title)} (${escapeHtml(unit.class_name)})</option>`
+      `<option value="${unit.id}" ${unit.id === lesson.unit_id ? 'selected' : ''}>${escapeHtml(unit.title || unit.title_ar)} (${escapeHtml(unit.class_name)})</option>`
     ).join('');
 
     const modal = document.createElement('div');
@@ -923,7 +1131,8 @@ window.editLesson = async function(id) {
         <form id="edit-lesson-form">
           <div class="form-group">
             <label for="edit-lesson-title">عنوان الدرس *</label>
-            <input type="text" id="edit-lesson-title" value="${escapeHtml(lesson.title)}" required autofocus>
+            <input type="text" id="edit-lesson-title" value="${escapeHtml(lesson.title || lesson.title_ar)}" required autofocus dir="rtl">
+            <small style="color: #666;">يرجى إدخال عنوان الدرس بالأحرف العربية فقط</small>
           </div>
           <div class="form-group">
             <label for="edit-lesson-unit">الوحدة الدراسية *</label>
@@ -943,6 +1152,9 @@ window.editLesson = async function(id) {
             <button type="button" class="btn btn-secondary btn-sm" onclick="addEditImageField()">+ إضافة صورة</button>
             <small style="color: #64748b; display: block; margin-top: 0.5rem;">رفع صور من جهازك مع نص توضيحي لكل صورة</small>
           </div>
+          <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="edit-lesson-error">
+            <i class="fas fa-exclamation-circle"></i> <span id="edit-lesson-error-msg"></span>
+          </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
             <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
@@ -951,6 +1163,21 @@ window.editLesson = async function(id) {
       </div>
     `;
     document.body.appendChild(modal);
+
+    const titleInput = document.getElementById('edit-lesson-title');
+    const errorDiv = document.getElementById('edit-lesson-error');
+    const errorMsg = document.getElementById('edit-lesson-error-msg');
+
+    // Real-time Arabic validation
+    titleInput.addEventListener('input', (e) => {
+      const arabicPattern = /^[\u0600-\u06FF\s]*$/;
+      if (e.target.value && !arabicPattern.test(e.target.value)) {
+        errorDiv.style.display = 'block';
+        errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+      } else {
+        errorDiv.style.display = 'none';
+      }
+    });
 
     // Initialize videos and images
     window.editVideoFieldCount = 0;
@@ -971,6 +1198,28 @@ window.editLesson = async function(id) {
 
     document.getElementById('edit-lesson-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      const title = titleInput.value.trim();
+      const unitId = document.getElementById('edit-lesson-unit').value;
+
+      if (!title) {
+        errorDiv.style.display = 'block';
+        errorMsg.textContent = 'عنوان الدرس مطلوب';
+        return;
+      }
+      if (!unitId) {
+        errorDiv.style.display = 'block';
+        errorMsg.textContent = 'الوحدة الدراسية مطلوبة';
+        return;
+      }
+
+      const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+      if (!arabicPattern.test(title)) {
+        errorDiv.style.display = 'block';
+        errorMsg.textContent = 'يجب أن يحتوي على أحرف عربية فقط';
+        return;
+      }
+
       try {
         const videos = [];
         const videoElements = document.querySelectorAll('#edit-videos-container [data-video-index]');
@@ -1003,8 +1252,8 @@ window.editLesson = async function(id) {
         });
 
         await adminApi.put(`/api/lessons/${id}`, {
-          title: document.getElementById('edit-lesson-title').value,
-          unit_id: document.getElementById('edit-lesson-unit').value,
+          title,
+          unit_id: unitId,
           content: '',
           videos: videos,
           images: images
@@ -1013,7 +1262,8 @@ window.editLesson = async function(id) {
         router.navigate('/admin/lessons');
         showAlert('تم تحديث الدرس بنجاح!');
       } catch (error) {
-        showAlert(error.message, 'error');
+        errorDiv.style.display = 'block';
+        errorMsg.textContent = error.message;
       }
     });
   } catch (error) {
@@ -1128,7 +1378,7 @@ window.uploadEditImage = async function(input, event) {
       throw new Error('Upload failed');
     }
 
-    const data = await response.json();
+    const data = await safeParseJson(response);
     const imageField = input.closest('[data-image-index]');
     imageField.setAttribute('data-image-path', data.imagePath);
     

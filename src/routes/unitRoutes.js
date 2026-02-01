@@ -56,29 +56,62 @@ router.post('/', authenticateToken, async (req, res) => {
     const { title, class_id } = req.body;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ error: 'Unit title is required' });
+      return res.status(400).json({ 
+        error: 'عنوان الوحدة مطلوب',
+        code: 'TITLE_REQUIRED' 
+      });
     }
 
     if (!class_id) {
-      return res.status(400).json({ error: 'Class ID is required' });
+      return res.status(400).json({ 
+        error: 'الصف الدراسي مطلوب',
+        code: 'CLASS_ID_REQUIRED' 
+      });
+    }
+
+    const trimmed = title.trim();
+
+    // Validation: Check for Arabic letters only
+    const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicOnlyPattern.test(trimmed)) {
+      return res.status(400).json({ 
+        error: 'عنوان الوحدة يجب أن يحتوي على أحرف عربية فقط',
+        code: 'INVALID_CHARACTERS' 
+      });
     }
 
     // Verify class exists
     const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_id]);
     if (!classExists) {
-      return res.status(404).json({ error: 'Class not found' });
+      return res.status(404).json({ 
+        error: 'الصف الدراسي غير موجود',
+        code: 'CLASS_NOT_FOUND' 
+      });
+    }
+
+    // Check for duplicates within the same class
+    const existingUnit = await db.get(
+      'SELECT id FROM units WHERE class_id = ? AND title = ?',
+      [class_id, trimmed]
+    );
+
+    if (existingUnit) {
+      return res.status(409).json({ 
+        error: 'هذا العنوان موجود بالفعل في هذا الصف. يرجى اختيار عنوان آخر',
+        code: 'DUPLICATE_UNIT_TITLE' 
+      });
     }
 
     const result = await db.run(
       'INSERT INTO units (title, class_id) VALUES (?, ?)',
-      [title.trim(), class_id]
+      [trimmed, class_id]
     );
 
     const newUnit = await db.get('SELECT * FROM units WHERE id = ?', [result.id]);
     res.status(201).json(newUnit);
   } catch (error) {
     console.error('Error creating unit:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'حدث خطأ في الخادم' });
   }
 });
 
@@ -89,33 +122,66 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ error: 'Unit title is required' });
+      return res.status(400).json({ 
+        error: 'عنوان الوحدة مطلوب',
+        code: 'TITLE_REQUIRED' 
+      });
     }
 
     if (!class_id) {
-      return res.status(400).json({ error: 'Class ID is required' });
+      return res.status(400).json({ 
+        error: 'الصف الدراسي مطلوب',
+        code: 'CLASS_ID_REQUIRED' 
+      });
+    }
+
+    const trimmed = title.trim();
+
+    // Validation: Check for Arabic letters only
+    const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicOnlyPattern.test(trimmed)) {
+      return res.status(400).json({ 
+        error: 'عنوان الوحدة يجب أن يحتوي على أحرف عربية فقط',
+        code: 'INVALID_CHARACTERS' 
+      });
     }
 
     // Verify class exists
     const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_id]);
     if (!classExists) {
-      return res.status(404).json({ error: 'Class not found' });
+      return res.status(404).json({ 
+        error: 'الصف الدراسي غير موجود',
+        code: 'CLASS_NOT_FOUND' 
+      });
+    }
+
+    // Check for duplicates within the same class excluding current unit
+    const existingUnit = await db.get(
+      'SELECT id FROM units WHERE class_id = ? AND title = ? AND id != ?',
+      [class_id, trimmed, id]
+    );
+
+    if (existingUnit) {
+      return res.status(409).json({ 
+        error: 'هذا العنوان موجود بالفعل في هذا الصف. يرجى اختيار عنوان آخر',
+        code: 'DUPLICATE_UNIT_TITLE' 
+      });
     }
 
     const result = await db.run(
       'UPDATE units SET title = ?, class_id = ? WHERE id = ?',
-      [title.trim(), class_id, id]
+      [trimmed, class_id, id]
     );
 
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Unit not found' });
+      return res.status(404).json({ error: 'الوحدة غير موجودة' });
     }
 
     const updatedUnit = await db.get('SELECT * FROM units WHERE id = ?', [id]);
     res.json(updatedUnit);
   } catch (error) {
     console.error('Error updating unit:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'حدث خطأ في الخادم' });
   }
 });
 

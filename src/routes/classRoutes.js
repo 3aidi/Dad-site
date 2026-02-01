@@ -37,19 +37,46 @@ router.post('/', authenticateToken, async (req, res) => {
     const { name } = req.body;
 
     if (!name || name.trim() === '') {
-      return res.status(400).json({ error: 'Class name is required' });
+      return res.status(400).json({ 
+        error: 'اسم الصف مطلوب',
+        code: 'NAME_REQUIRED' 
+      });
+    }
+
+    const trimmed = name.trim();
+
+    // Validation: Check for Arabic letters only (including spaces)
+    const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicOnlyPattern.test(trimmed)) {
+      return res.status(400).json({ 
+        error: 'اسم الصف يجب أن يحتوي على أحرف عربية فقط',
+        code: 'INVALID_CHARACTERS' 
+      });
+    }
+
+    // Check for duplicates (exact match)
+    const existingClass = await db.get(
+      'SELECT id FROM classes WHERE name = ?',
+      [trimmed]
+    );
+
+    if (existingClass) {
+      return res.status(409).json({ 
+        error: 'هذا الاسم موجود بالفعل. يرجى اختيار اسم آخر',
+        code: 'DUPLICATE_CLASS_NAME' 
+      });
     }
 
     const result = await db.run(
       'INSERT INTO classes (name) VALUES (?)',
-      [name.trim()]
+      [trimmed]
     );
 
     const newClass = await db.get('SELECT * FROM classes WHERE id = ?', [result.id]);
     res.status(201).json(newClass);
   } catch (error) {
     console.error('Error creating class:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'حدث خطأ في الخادم' });
   }
 });
 
@@ -60,23 +87,50 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     if (!name || name.trim() === '') {
-      return res.status(400).json({ error: 'Class name is required' });
+      return res.status(400).json({ 
+        error: 'اسم الصف مطلوب',
+        code: 'NAME_REQUIRED' 
+      });
+    }
+
+    const trimmed = name.trim();
+
+    // Validation: Check for Arabic letters only
+    const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicOnlyPattern.test(trimmed)) {
+      return res.status(400).json({ 
+        error: 'اسم الصف يجب أن يحتوي على أحرف عربية فقط',
+        code: 'INVALID_CHARACTERS' 
+      });
+    }
+
+    // Check for duplicates excluding current class
+    const existingClass = await db.get(
+      'SELECT id FROM classes WHERE name = ? AND id != ?',
+      [trimmed, id]
+    );
+
+    if (existingClass) {
+      return res.status(409).json({ 
+        error: 'هذا الاسم موجود بالفعل. يرجى اختيار اسم آخر',
+        code: 'DUPLICATE_CLASS_NAME' 
+      });
     }
 
     const result = await db.run(
       'UPDATE classes SET name = ? WHERE id = ?',
-      [name.trim(), id]
+      [trimmed, id]
     );
 
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Class not found' });
+      return res.status(404).json({ error: 'الصف غير موجود' });
     }
 
     const updatedClass = await db.get('SELECT * FROM classes WHERE id = ?', [id]);
     res.json(updatedClass);
   } catch (error) {
     console.error('Error updating class:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'حدث خطأ في الخادم' });
   }
 });
 

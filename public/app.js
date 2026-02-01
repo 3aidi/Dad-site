@@ -36,7 +36,7 @@ class Router {
       const lessonId = path.split('/')[2];
       this.routes['/lesson/:id']?.(lessonId);
     } else {
-      this.showError('Page not found');
+      this.showError('الصفحة غير موجودة');
     }
   }
 

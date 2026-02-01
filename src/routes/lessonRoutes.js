@@ -92,22 +92,55 @@ router.post('/', authenticateToken, async (req, res) => {
     const { title, unit_id, content, videos, images } = req.body;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ error: 'Lesson title is required' });
+      return res.status(400).json({ 
+        error: 'عنوان الدرس مطلوب',
+        code: 'TITLE_REQUIRED' 
+      });
     }
 
     if (!unit_id) {
-      return res.status(400).json({ error: 'Unit ID is required' });
+      return res.status(400).json({ 
+        error: 'الوحدة الدراسية مطلوبة',
+        code: 'UNIT_ID_REQUIRED' 
+      });
+    }
+
+    const trimmed = title.trim();
+
+    // Validation: Check for Arabic letters only
+    const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicOnlyPattern.test(trimmed)) {
+      return res.status(400).json({ 
+        error: 'عنوان الدرس يجب أن يحتوي على أحرف عربية فقط',
+        code: 'INVALID_CHARACTERS' 
+      });
     }
 
     // Verify unit exists
     const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_id]);
     if (!unitExists) {
-      return res.status(404).json({ error: 'Unit not found' });
+      return res.status(404).json({ 
+        error: 'الوحدة الدراسية غير موجودة',
+        code: 'UNIT_NOT_FOUND' 
+      });
+    }
+
+    // Check for duplicates within the same unit
+    const existingLesson = await db.get(
+      'SELECT id FROM lessons WHERE unit_id = ? AND title = ?',
+      [unit_id, trimmed]
+    );
+
+    if (existingLesson) {
+      return res.status(409).json({ 
+        error: 'هذا العنوان موجود بالفعل في هذه الوحدة. يرجى اختيار عنوان آخر',
+        code: 'DUPLICATE_LESSON_TITLE' 
+      });
     }
 
     const result = await db.run(
       'INSERT INTO lessons (title, unit_id, content) VALUES (?, ?, ?)',
-      [title.trim(), unit_id, content || '']
+      [trimmed, unit_id, content || '']
     );
 
     // Insert videos if provided
@@ -158,27 +191,61 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { title, unit_id, content, videos, images } = req.body;
     const { id } = req.params;
 
+    // Validation: Check if title is empty
     if (!title || title.trim() === '') {
-      return res.status(400).json({ error: 'Lesson title is required' });
+      return res.status(400).json({ 
+        error: 'اسم الدرس مطلوب',
+        code: 'TITLE_REQUIRED' 
+      });
     }
 
     if (!unit_id) {
-      return res.status(400).json({ error: 'Unit ID is required' });
+      return res.status(400).json({ 
+        error: 'الوحدة الدراسية مطلوبة',
+        code: 'UNIT_ID_REQUIRED' 
+      });
+    }
+
+    const trimmedTitle = title.trim();
+
+    // Validation: Check for Arabic letters only
+    const arabicPattern = /^[\u0600-\u06FF\s]+$/;
+    if (!arabicPattern.test(trimmedTitle)) {
+      return res.status(400).json({ 
+        error: 'يجب أن يحتوي على أحرف عربية فقط',
+        code: 'INVALID_CHARACTERS' 
+      });
     }
 
     // Verify unit exists
     const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_id]);
     if (!unitExists) {
-      return res.status(404).json({ error: 'Unit not found' });
+      return res.status(404).json({ 
+        error: 'الوحدة الدراسية غير موجودة',
+        code: 'UNIT_NOT_FOUND' 
+      });
+    }
+
+    // Check for duplicates within the same unit excluding current lesson
+    const existingLesson = await db.get(
+      'SELECT id FROM lessons WHERE unit_id = ? AND title = ? AND id != ?',
+      [unit_id, trimmedTitle, id]
+    );
+
+    if (existingLesson) {
+      return res.status(409).json({ 
+        error: 'هذا الاسم موجود بالفعل',
+        code: 'DUPLICATE_LESSON_TITLE' 
+      });
     }
 
     const result = await db.run(
       'UPDATE lessons SET title = ?, unit_id = ?, content = ? WHERE id = ?',
-      [title.trim(), unit_id, content || '', id]
+      [trimmedTitle, unit_id, content || '', id]
     );
 
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Lesson not found' });
+      return res.status(404).json({ error: 'الدرس غير موجود' });
     }
 
     // Handle videos: delete old ones and insert new ones
@@ -221,7 +288,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     res.json({ ...updatedLesson, videos: lessonsVideos, images: lessonsImages });
   } catch (error) {
     console.error('Error updating lesson:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'حدث خطأ في الخادم' });
   }
 });
 

@@ -305,16 +305,24 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
     }
 
     console.log('Uploading image:', req.file.originalname, 'Size:', req.file.size);
+    
+    // Ensure Cloudinary is configured with latest env vars
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET
+    });
 
     const uploadFromBuffer = () => new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'educational-content-system/lesson-images',
-          resource_type: 'image'
+          resource_type: 'image',
+          api_key: process.env.CLOUDINARY_API_KEY
         },
         (error, result) => {
           if (error) {
-            console.error('Cloudinary error:', error.message);
+            console.error('Cloudinary error:', error.message, error);
             return reject(error);
           }
           console.log('Image uploaded successfully:', result.secure_url);

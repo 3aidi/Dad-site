@@ -60,61 +60,77 @@ class AdminRouter {
 // API Helper
 const adminApi = {
   async get(url) {
-    const response = await fetch(url);
-    if (response.status === 401 || response.status === 403) {
-      router.navigate('/admin/login');
-      throw new Error('Unauthorized');
+    try {
+      const response = await fetch(url);
+      if (response.status === 401 || response.status === 403) {
+        router.navigate('/admin/login');
+        throw new Error('غير مصرح');
+      }
+      if (!response.ok) {
+        throw new Error('فشل تحميل البيانات');
+      }
+      return response.json();
+    } catch (error) {
+      throw error;
     }
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
   },
 
   async post(url, data) {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (response.status === 401 || response.status === 403) {
-      router.navigate('/admin/login');
-      throw new Error('Unauthorized');
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (response.status === 401 || response.status === 403) {
+        router.navigate('/admin/login');
+        throw new Error('غير مصرح');
+      }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'حدث خطأ');
+      }
+      return response.json();
+    } catch (error) {
+      throw error;
     }
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Server error');
-    }
-    return response.json();
   },
 
   async put(url, data) {
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (response.status === 401 || response.status === 403) {
-      router.navigate('/admin/login');
-      throw new Error('Unauthorized');
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (response.status === 401 || response.status === 403) {
+        router.navigate('/admin/login');
+        throw new Error('غير مصرح');
+      }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'فشل التحديث');
+      }
+      return response.json();
+    } catch (error) {
+      throw error;
     }
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Server error');
-    }
-    return response.json();
   },
 
   async delete(url) {
-    const response = await fetch(url, { method: 'DELETE' });
-    if (response.status === 401 || response.status === 403) {
-      router.navigate('/admin/login');
-      throw new Error('Unauthorized');
+    try {
+      const response = await fetch(url, { method: 'DELETE' });
+      if (response.status === 401 || response.status === 403) {
+        router.navigate('/admin/login');
+        throw new Error('غير مصرح');
+      }
+      if (!response.ok) {
+        throw new Error('فشل الحذف');
+      }
+      return response.json();
+    } catch (error) {
+      throw error;
     }
-    if (!response.ok) {
-      throw new Error('Delete failed');
-    }
-    return response.json();
   }
 };
 
@@ -143,6 +159,38 @@ function showAlert(message, type = 'success') {
     content.insertBefore(alert, content.firstChild);
     setTimeout(() => alert.remove(), 5000);
   }
+}
+
+function showConfirmModal(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h2>${escapeHtml(title)}</h2>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        </div>
+        <div style="padding: 1.5rem; color: #334155; line-height: 1.6;">
+          ${message}
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-danger" onclick="this.closest('.modal').remove(); window.confirmResult = true; window.dispatchEvent(new Event('confirmResolved'));">
+            <i class="fas fa-trash"></i> نعم، احذفه
+          </button>
+          <button class="btn btn-secondary" onclick="this.closest('.modal').remove(); window.confirmResult = false; window.dispatchEvent(new Event('confirmResolved'));">
+            <i class="fas fa-times"></i> إلغاء
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    window.addEventListener('confirmResolved', function handler() {
+      window.removeEventListener('confirmResolved', handler);
+      resolve(window.confirmResult);
+    }, { once: true });
+  });
 }
 
 // Admin Layout Template
@@ -203,24 +251,25 @@ router.on('/admin/login', async () => {
   
   app.innerHTML = `
     <div class="login-container">
-      <div class="login-box">
-        <div class="logo">
+      <div class="welcome-header">
+        <div class="teacher-badge">
           <i class="fas fa-graduation-cap"></i>
+          <span>الأستاذ سعد عبد الفتاح العايدي</span>
         </div>
-        <h1>تسجيل الدخول</h1>
-        <p>لوحة تحكم الأستاذ سعد العايدي</p>
-        <form id="login-form">
-          <div class="form-group">
-            <label for="username"><i class="fas fa-user"></i> اسم المستخدم</label>
-            <input type="text" id="username" name="username" required autofocus placeholder="أدخل اسم المستخدم">
+      </div>
+      <div class="login-form-wrapper">
+        <div class="container">
+          <div class="heading">تسجيل الدخول</div>
+
+            <form id="login-form" class="form" onsubmit="return false;">
+              <input required class="input" type="text" name="username" id="username" placeholder="اسم المستخدم" />
+              <input required class="input" type="password" name="password" id="password" placeholder="كلمة المرور" />
+              <span class="forgot-password"><a href="#">هل نسيت كلمة المرور؟</a></span>
+              <div id="login-error" style="display: none;" class="alert alert-error"></div>
+              <input class="login-button" type="submit" value="دخول" />
+            </form>
           </div>
-          <div class="form-group">
-            <label for="password"><i class="fas fa-lock"></i> كلمة المرور</label>
-            <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
-          </div>
-          <div id="login-error" style="display: none;" class="alert alert-error"></div>
-          <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-sign-in-alt"></i> دخول</button>
-        </form>
+        </div>
       </div>
     </div>
   `;
@@ -231,8 +280,25 @@ router.on('/admin/login', async () => {
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('login-error');
 
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+
     try {
-      await adminApi.post('/api/auth/login', { username, password });
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const message = response.status === 401
+          ? 'Wrong password'
+          : (data.error || 'حدث خطأ');
+        throw new Error(message);
+      }
+
+      await response.json();
       router.navigate('/admin/dashboard');
     } catch (error) {
       errorDiv.textContent = error.message;
@@ -297,7 +363,7 @@ router.on('/admin/classes', async () => {
             <td>${escapeHtml(cls.name)}</td>
             <td>${new Date(cls.created_at).toLocaleDateString('ar-EG')}</td>
             <td class="table-actions">
-              <button class="btn btn-sm btn-secondary" onclick="editClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
+              <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
               <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml(cls.name).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
           </tr>
@@ -407,9 +473,12 @@ window.editClass = function(id, name) {
 };
 
 window.deleteClass = async function(id, name) {
-  if (!confirm(`هل أنت متأكد من حذف "${name}"؟\n\nسيتم حذف جميع الوحدات والدروس التابعة لهذا الصف.`)) {
-    return;
-  }
+  const confirmed = await showConfirmModal(
+    'حذف الصف الدراسي',
+    `<p>هل أنت متأكد من حذف "<strong>${escapeHtml(name)}</strong>"؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> سيتم حذف جميع الوحدات والدروس التابعة لهذا الصف.</p>`
+  );
+  
+  if (!confirmed) return;
   
   try {
     await adminApi.delete(`/api/classes/${id}`);
@@ -573,9 +642,12 @@ window.editUnit = function(id, title, classId) {
 };
 
 window.deleteUnit = async function(id, title) {
-  if (!confirm(`هل أنت متأكد من حذف "${title}"?\n\nسيتم حذف جميع الدروس التابعة لهذه الوحدة.`)) {
-    return;
-  }
+  const confirmed = await showConfirmModal(
+    'حذف الوحدة الدراسية',
+    `<p>هل أنت متأكد من حذف "<strong>${escapeHtml(title)}</strong>"؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> سيتم حذف جميع الدروس التابعة لهذه الوحدة.</p>`
+  );
+  
+  if (!confirmed) return;
   
   try {
     await adminApi.delete(`/api/units/${id}`);
@@ -667,8 +739,16 @@ window.showCreateLessonForm = function() {
           </select>
         </div>
         <div class="form-group">
-          <label for="lesson-content">محتوى الدرس</label>
-          <textarea id="lesson-content" placeholder="Enter محتوى الدرس here..."></textarea>
+          <label><i class="fab fa-youtube"></i> الفيديوهات (اختياري)</label>
+          <div id="videos-container"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addVideoField()">+ إضافة فيديو</button>
+          <small style="color: #64748b; display: block; margin-top: 0.5rem;">أضف فيديو واحد أو أكثر مع شرح منفصل لكل واحد</small>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-image"></i> الصور (اختياري)</label>
+          <div id="images-container"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addImageField()">+ إضافة صورة</button>
+          <small style="color: #64748b; display: block; margin-top: 0.5rem;">رفع صور من جهازك مع نص توضيحي لكل صورة</small>
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-success">حفظ الدرس</button>
@@ -679,13 +759,50 @@ window.showCreateLessonForm = function() {
   `;
   document.body.appendChild(modal);
 
+  // Initialize with one empty video field
+  window.videoFieldCount = 0;
+  window.imageFieldCount = 0;
+  addVideoField();
+
   document.getElementById('create-lesson-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
+      const videos = [];
+      const videoElements = document.querySelectorAll('#videos-container [data-video-index]');
+      
+      videoElements.forEach(el => {
+        const url = el.querySelector('input[type="url"]').value;
+        if (url) {
+          videos.push({
+            video_url: url,
+            video_position: el.querySelector('select[name="position"]').value,
+            video_size: 'medium',
+            video_explanation: el.querySelector('textarea').value
+          });
+        }
+      });
+
+      const images = [];
+      const imageElements = document.querySelectorAll('#images-container [data-image-index]');
+      
+      imageElements.forEach(el => {
+        const imagePath = el.getAttribute('data-image-path');
+        if (imagePath) {
+          images.push({
+            image_path: imagePath,
+            image_position: el.querySelector('select[name="image-position"]').value,
+            image_size: 'medium',
+            image_caption: el.querySelector('textarea').value
+          });
+        }
+      });
+
       await adminApi.post('/api/lessons', {
         title: document.getElementById('lesson-title').value,
         unit_id: document.getElementById('lesson-unit').value,
-        content: document.getElementById('lesson-content').value
+        content: '',
+        videos: videos,
+        images: images
       });
       modal.remove();
       router.navigate('/admin/lessons');
@@ -694,6 +811,98 @@ window.showCreateLessonForm = function() {
       showAlert(error.message, 'error');
     }
   });
+};
+
+window.addVideoField = function() {
+  const container = document.getElementById('videos-container');
+  if (!container) return;
+  
+  const index = window.videoFieldCount++;
+  const videoField = document.createElement('div');
+  videoField.setAttribute('data-video-index', index);
+  videoField.style.cssText = 'background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e2e8f0;';
+  videoField.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <label style="font-weight: 600;">الفيديو ${index + 1}</label>
+      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-video-index]').remove()">حذف</button>
+    </div>
+    <input type="url" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <select name="position" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <option value="bottom">أسفل الفيديو</option>
+        <option value="top">أعلى الفيديو</option>
+        <option value="side">بجانب الفيديو</option>
+      </select>
+    </div>
+    <textarea placeholder="شرح هذا الفيديو..." style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; min-height: 60px; resize: vertical;"></textarea>
+  `;
+  container.appendChild(videoField);
+};
+
+window.addImageField = function(imagePath = '', position = 'bottom', size = 'medium', caption = '') {
+  const container = document.getElementById('images-container');
+  if (!container) return;
+  
+  const index = window.imageFieldCount++;
+  const imageField = document.createElement('div');
+  imageField.setAttribute('data-image-index', index);
+  imageField.setAttribute('data-image-path', imagePath);
+  imageField.style.cssText = 'background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e2e8f0;';
+  imageField.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <label style="font-weight: 600;">الصورة ${index + 1}</label>
+      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-image-index]').remove()">حذف</button>
+    </div>
+    ${imagePath ? `<div style="background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e2e8f0;">
+      <img src="${imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
+    </div>` : ''}
+    <input type="file" accept="image/*" onchange="uploadImage(this, event)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <select name="image-position" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <option value="bottom" ${position === 'bottom' ? 'selected' : ''}>أسفل الصورة</option>
+        <option value="top" ${position === 'top' ? 'selected' : ''}>أعلى الصورة</option>
+        <option value="side" ${position === 'side' ? 'selected' : ''}>بجانب الصورة</option>
+      </select>
+    </div>
+    <textarea placeholder="نص توضيحي للصورة..." style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; min-height: 60px; resize: vertical;">${escapeHtml(caption)}</textarea>
+  `;
+  container.appendChild(imageField);
+};
+
+window.uploadImage = async function(input, event) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await fetch('/api/lessons/upload-image', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const data = await response.json();
+    const imageField = input.closest('[data-image-index]');
+    imageField.setAttribute('data-image-path', data.imagePath);
+    
+    // Add preview
+    let preview = imageField.querySelector('div[style*="background: white"]');
+    if (!preview) {
+      preview = document.createElement('div');
+      preview.style.cssText = 'background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e2e8f0;';
+      input.parentNode.insertBefore(preview, input.nextSibling);
+    }
+    preview.innerHTML = `<img src="${data.imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">`;
+    
+    showAlert('تم رفع الصورة بنجاح!');
+  } catch (error) {
+    showAlert('خطأ في رفع الصورة: ' + error.message, 'error');
+  }
 };
 
 window.editLesson = async function(id) {
@@ -723,8 +932,16 @@ window.editLesson = async function(id) {
             </select>
           </div>
           <div class="form-group">
-            <label for="edit-lesson-content">محتوى الدرس</label>
-            <textarea id="edit-lesson-content">${escapeHtml(lesson.content || '')}</textarea>
+            <label><i class="fab fa-youtube"></i> الفيديوهات (اختياري)</label>
+            <div id="edit-videos-container"></div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addEditVideoField()">+ إضافة فيديو</button>
+            <small style="color: #64748b; display: block; margin-top: 0.5rem;">أضف فيديو واحد أو أكثر مع شرح منفصل لكل واحد</small>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-image"></i> الصور (اختياري)</label>
+            <div id="edit-images-container"></div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addEditImageField()">+ إضافة صورة</button>
+            <small style="color: #64748b; display: block; margin-top: 0.5rem;">رفع صور من جهازك مع نص توضيحي لكل صورة</small>
           </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
@@ -735,13 +952,62 @@ window.editLesson = async function(id) {
     `;
     document.body.appendChild(modal);
 
+    // Initialize videos and images
+    window.editVideoFieldCount = 0;
+    window.editImageFieldCount = 0;
+    if (lesson.videos && lesson.videos.length > 0) {
+      lesson.videos.forEach((video, idx) => {
+        addEditVideoField(video.video_url, video.position, video.size, video.explanation);
+      });
+    } else {
+      addEditVideoField();
+    }
+
+    if (lesson.images && lesson.images.length > 0) {
+      lesson.images.forEach((image, idx) => {
+        addEditImageField(image.image_path, image.position, image.size, image.caption);
+      });
+    }
+
     document.getElementById('edit-lesson-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
+        const videos = [];
+        const videoElements = document.querySelectorAll('#edit-videos-container [data-video-index]');
+        
+        videoElements.forEach(el => {
+          const url = el.querySelector('input[type="url"]').value;
+          if (url) {
+            videos.push({
+              video_url: url,
+              video_position: el.querySelector('select[name="position"]').value,
+              video_size: 'medium',
+              video_explanation: el.querySelector('textarea').value
+            });
+          }
+        });
+
+        const images = [];
+        const imageElements = document.querySelectorAll('#edit-images-container [data-image-index]');
+        
+        imageElements.forEach(el => {
+          const imagePath = el.getAttribute('data-image-path');
+          if (imagePath) {
+            images.push({
+              image_path: imagePath,
+              image_position: el.querySelector('select[name="image-position"]').value,
+              image_size: 'medium',
+              image_caption: el.querySelector('textarea').value
+            });
+          }
+        });
+
         await adminApi.put(`/api/lessons/${id}`, {
           title: document.getElementById('edit-lesson-title').value,
           unit_id: document.getElementById('edit-lesson-unit').value,
-          content: document.getElementById('edit-lesson-content').value
+          content: '',
+          videos: videos,
+          images: images
         });
         modal.remove();
         router.navigate('/admin/lessons');
@@ -756,9 +1022,12 @@ window.editLesson = async function(id) {
 };
 
 window.deleteLesson = async function(id, title) {
-  if (!confirm(`هل أنت متأكد من حذف "${title}"?`)) {
-    return;
-  }
+  const confirmed = await showConfirmModal(
+    'حذف الدرس',
+    `<p>هل أنت متأكد من حذف "<strong>${escapeHtml(title)}</strong>"؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> لا يمكن التراجع عن هذا الإجراء.</p>`
+  );
+  
+  if (!confirmed) return;
   
   try {
     await adminApi.delete(`/api/lessons/${id}`);
@@ -786,4 +1055,95 @@ if (document.readyState === 'loading') {
   router.handleRoute();
 }
 
+window.addEditVideoField = function(url = '', position = 'bottom', size = 'medium', explanation = '') {
+  const container = document.getElementById('edit-videos-container');
+  if (!container) return;
+  
+  const index = window.editVideoFieldCount++;
+  const videoField = document.createElement('div');
+  videoField.setAttribute('data-video-index', index);
+  videoField.style.cssText = 'background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e2e8f0;';
+  videoField.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <label style="font-weight: 600;">الفيديو ${index + 1}</label>
+      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-video-index]').remove()">حذف</button>
+    </div>
+    <input type="url" value="${escapeHtml(url)}" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <select name="position" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <option value="bottom" ${position === 'bottom' ? 'selected' : ''}>أسفل الفيديو</option>
+        <option value="top" ${position === 'top' ? 'selected' : ''}>أعلى الفيديو</option>
+        <option value="side" ${position === 'side' ? 'selected' : ''}>بجانب الفيديو</option>
+      </select>
+    </div>
+    <textarea placeholder="شرح هذا الفيديو..." style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; min-height: 60px; resize: vertical;">${escapeHtml(explanation)}</textarea>
+  `;
+  container.appendChild(videoField);
+};
+
+window.addEditImageField = function(imagePath = '', position = 'bottom', size = 'medium', caption = '') {
+  const container = document.getElementById('edit-images-container');
+  if (!container) return;
+  
+  const index = window.editImageFieldCount++;
+  const imageField = document.createElement('div');
+  imageField.setAttribute('data-image-index', index);
+  imageField.setAttribute('data-image-path', imagePath);
+  imageField.style.cssText = 'background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e2e8f0;';
+  imageField.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <label style="font-weight: 600;">الصورة ${index + 1}</label>
+      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-image-index]').remove()">حذف</button>
+    </div>
+    ${imagePath ? `<div style="background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e2e8f0;">
+      <img src="${imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
+    </div>` : ''}
+    <input type="file" accept="image/*" onchange="uploadEditImage(this, event)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <select name="image-position" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <option value="bottom" ${position === 'bottom' ? 'selected' : ''}>أسفل الصورة</option>
+        <option value="top" ${position === 'top' ? 'selected' : ''}>أعلى الصورة</option>
+        <option value="side" ${position === 'side' ? 'selected' : ''}>بجانب الصورة</option>
+      </select>
+    </div>
+    <textarea placeholder="نص توضيحي للصورة..." style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; min-height: 60px; resize: vertical;">${escapeHtml(caption)}</textarea>
+  `;
+  container.appendChild(imageField);
+};
+
+window.uploadEditImage = async function(input, event) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await fetch('/api/lessons/upload-image', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const data = await response.json();
+    const imageField = input.closest('[data-image-index]');
+    imageField.setAttribute('data-image-path', data.imagePath);
+    
+    // Add preview
+    let preview = imageField.querySelector('div[style*="background: white"]');
+    if (!preview) {
+      preview = document.createElement('div');
+      preview.style.cssText = 'background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e2e8f0;';
+      input.parentNode.insertBefore(preview, input.nextSibling);
+    }
+    preview.innerHTML = `<img src="${data.imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">`;
+    
+    showAlert('تم رفع الصورة بنجاح!');
+  } catch (error) {
+    showAlert('خطأ في رفع الصورة: ' + error.message, 'error');
+  }
+};
 

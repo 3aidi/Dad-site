@@ -82,6 +82,10 @@ async function initializeDatabase() {
           unit_id INTEGER NOT NULL,
           title TEXT NOT NULL,
           content TEXT,
+          video_url TEXT,
+          video_position TEXT DEFAULT 'top',
+          video_size TEXT DEFAULT 'large',
+          video_explanation TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE
         )
@@ -93,6 +97,10 @@ async function initializeDatabase() {
           unit_id INTEGER NOT NULL,
           title TEXT NOT NULL,
           content TEXT,
+          video_url TEXT,
+          video_position TEXT DEFAULT 'top',
+          video_size TEXT DEFAULT 'large',
+          video_explanation TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE
         )

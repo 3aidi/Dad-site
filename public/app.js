@@ -53,24 +53,40 @@ class Router {
 
   showError(message) {
     const app = document.getElementById('app');
-    app.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h3>خطأ</h3>
-        <p>${message}</p>
-      </div>
-    `;
+    if (app) {
+      app.innerHTML = `
+        <div class="error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>خطأ</h3>
+          <p>${message}</p>
+          <button onclick="location.href='/'" class="btn">العودة للرئيسية</button>
+        </div>
+      `;
+    }
   }
 }
 
-// API Helper
+// Optimized API Helper with timeout and error handling
 const api = {
-  async get(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  async get(url, timeout = 10000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error('فشل تحميل البيانات');
+      }
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('انتهت مهلة الاتصال');
+      }
+      throw error;
     }
-    return response.json();
   }
 };
 
@@ -100,7 +116,7 @@ router.on('/', async () => {
 // Classes List Page
 router.on('/classes', async () => {
   try {
-    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الصفوف الدراسية...</span></div>';
+    app.innerHTML = `<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الصفوف الدراسية...</span></div>`;
     
     const classes = await api.get('/api/classes');
     
@@ -109,10 +125,11 @@ router.on('/classes', async () => {
         <h1 class="page-title">الصفوف الدراسية</h1>
         <div class="empty-state">
           <div class="empty-state-icon"><i class="fas fa-book-open"></i></div>
-          <h3>لا توجد صلوف دراسية متاحة حاليًا</h3>
+          <h3>لا توجد صفوف دراسية متاحة حاليًا</h3>
           <p>يرجى العودة لاحقًا للاطلاع على المحتوى الجديد</p>
         </div>
       `;
+      if (window.i18n) window.i18n.translatePage();
       return;
     }
 
@@ -289,16 +306,111 @@ router.on('/lesson/:id', async (lessonId) => {
       </div>
     `;
 
+    // Extract videos from lesson
+    let videosSections = '';
+    if (lesson.videos && Array.isArray(lesson.videos) && lesson.videos.length > 0) {
+      videosSections = lesson.videos.map((video) => {
+        const videoId = extractYouTubeId(video.video_url);
+        if (!videoId) return '';
+        
+        const size = video.size || 'large';
+        const position = video.position || 'bottom';
+        const videoEmbed = `
+          <div class="video-container video-${size}">
+            <iframe 
+              src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen
+              title="فيديو الدرس"
+            ></iframe>
+          </div>
+        `;
+        
+        const videoExplanation = video.explanation ? `
+          <div class="video-explanation">
+            ${video.explanation.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+          </div>
+        ` : '';
+        
+        if (position === 'side') {
+          return `
+            <div class="video-wrapper video-side">
+              <div class="video-embed-section">${videoEmbed}</div>
+              <div class="video-caption-section">${videoExplanation}</div>
+            </div>
+          `;
+        } else if (position === 'top') {
+          return `
+            <div class="video-wrapper video-top-caption">
+              ${videoExplanation}
+              ${videoEmbed}
+            </div>
+          `;
+        } else {
+          return `
+            <div class="video-wrapper video-bottom-caption">
+              ${videoEmbed}
+              ${videoExplanation}
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
+    // Extract images from lesson
+    let imagesSections = '';
+    if (lesson.images && Array.isArray(lesson.images) && lesson.images.length > 0) {
+      imagesSections = lesson.images.map((image) => {
+        const size = image.size || 'medium';
+        const position = image.position || 'bottom';
+        const imageEmbed = `
+          <div class="image-container image-${size}">
+            <img src="${image.image_path}" alt="صورة الدرس" style="width: 100%; height: auto; border-radius: 8px;">
+          </div>
+        `;
+        
+        const imageCaption = image.caption ? `
+          <div class="image-caption">
+            ${image.caption.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+          </div>
+        ` : '';
+        
+        if (position === 'side') {
+          return `
+            <div class="image-wrapper image-side">
+              <div class="image-embed-section">${imageEmbed}</div>
+              <div class="image-caption-section">${imageCaption}</div>
+            </div>
+          `;
+        } else if (position === 'top') {
+          return `
+            <div class="image-wrapper image-top-caption">
+              ${imageCaption}
+              ${imageEmbed}
+            </div>
+          `;
+        } else {
+          return `
+            <div class="image-wrapper image-bottom-caption">
+              ${imageEmbed}
+              ${imageCaption}
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
     const content = lesson.content 
       ? lesson.content.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('') 
-      : '<p><em>لا يوجد محتوى متاح لهذا الدرس حاليًا.</em></p>';
+      : '';
+    
+    const lessonHTML = `${videosSections}${imagesSections}${content ? `<div class="lesson-content">${content}</div>` : ''}`;
 
     app.innerHTML = `
       ${breadcrumbs}
       <h1 class="page-title">${escapeHtml(lesson.title)}</h1>
-      <div class="lesson-content">
-        ${content}
-      </div>
+      ${lessonHTML}
     `;
   } catch (error) {
     app.innerHTML = `
@@ -310,6 +422,28 @@ router.on('/lesson/:id', async (lessonId) => {
     `;
   }
 });
+
+// Utility function to extract YouTube video ID
+function extractYouTubeId(url) {
+  if (!url) return null;
+  
+  // Handle various YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=)([\w-]+)/,
+    /(?:youtube\.com\/embed\/)([\w-]+)/,
+    /(?:youtu\.be\/)([\w-]+)/,
+    /(?:youtube\.com\/v\/)([\w-]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
 
 // Utility function to escape HTML
 function escapeHtml(text) {

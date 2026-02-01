@@ -101,12 +101,12 @@ header p {
 
 /* Navigation */
 nav {
-  background-color: white;
+  background: var(--gradient-primary);
   border-bottom: 3px solid var(--accent-gold);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
 }
 
 .nav-content {
@@ -124,7 +124,7 @@ nav a {
   align-items: center;
   gap: 0.75rem;
   padding: 1.25rem 2.5rem;
-  color: var(--text-color);
+  color: white;
   text-decoration: none;
   border-bottom: 4px solid transparent;
   transition: all 0.3s ease;
@@ -139,8 +139,8 @@ nav a i {
 }
 
 nav a:hover {
-  color: var(--primary-color);
-  background: var(--light-bg);
+  color: var(--accent-gold);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 nav a:hover i {
@@ -148,9 +148,9 @@ nav a:hover i {
 }
 
 nav a.active {
-  color: var(--primary-color);
+  color: var(--accent-gold);
   border-bottom-color: var(--accent-gold);
-  background: linear-gradient(180deg, transparent 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Main Content */
@@ -366,10 +366,251 @@ main {
   border-right: 6px solid var(--accent-gold);
 }
 
+/* Video Container (YouTube Embed) - Responsive like YouTube/Netflix */
+.video-container {
+  position: relative;
+  width: 100%;
+  margin: 2rem auto;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  background: #000;
+}
+
+/* Video Size Variations - Responsive */
+.video-container.video-small {
+  max-width: min(100%, 480px); /* Mobile-first: full width on small screens, max 480px on larger */
+}
+
+.video-container.video-medium {
+  max-width: min(100%, 720px); /* Similar to YouTube's 720p player */
+}
+
+.video-container.video-large {
+  max-width: min(100%, 1200px); /* Full HD - stretches wider on desktop */
+}
+
+.video-container.video-full {
+  max-width: 100%; /* Full width always - stretches completely */
+  padding: 0;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .video-container {
+    margin: 1.5rem auto;
+    border-radius: 12px;
+  }
+  
+  /* On mobile, all sizes adapt to screen width with padding */
+  .video-container.video-small,
+  .video-container.video-medium,
+  .video-container.video-large,
+  .video-container.video-full {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 8px;
+  }
+}
+
+/* Tablet Responsiveness */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .video-container.video-small {
+    max-width: 90%; /* Slightly smaller on tablets */
+  }
+  
+  .video-container.video-medium {
+    max-width: 95%;
+  }
+  
+  .video-container.video-large,
+  .video-container.video-full {
+    max-width: 100%;
+  }
+}
+
+/* Desktop Responsiveness */
+@media (min-width: 1025px) {
+  .video-container.video-small {
+    max-width: 480px;
+  }
+  
+  .video-container.video-medium {
+    max-width: 720px;
+  }
+  
+  .video-container.video-large {
+    max-width: none; /* Remove limit - stretch to full width */
+    width: 100%;
+  }
+  
+  .video-container.video-full {
+    max-width: none;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* Video Explanation Box */
+.video-explanation {
+  background: var(--light-bg);
+  border-left: 4px solid var(--secondary-color);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-size: 1.0625rem;
+  color: var(--text-color);
+  line-height: 1.8;
+}
+
+.video-explanation p {
+  margin: 0;
+}
+
+/* Video wrapper layouts */
+.video-wrapper {
+  margin-bottom: 2rem;
+}
+
+/* Caption below video (default) */
+.video-bottom-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Caption above video */
+.video-top-caption {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1rem;
+}
+
+/* Caption beside video */
+.video-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.video-embed-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.video-caption-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Side-by-side layout for videos */
+.lesson-layout-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.lesson-video-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .lesson-content p {
   margin-bottom: 1.5rem;
   color: var(--text-color);
   text-align: justify;
+}
+
+/* Image container and layouts */
+.image-container {
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-container.image-small {
+  max-width: 480px;
+}
+
+.image-container.image-medium {
+  max-width: 720px;
+}
+
+.image-container.image-large {
+  max-width: 1200px;
+}
+
+.image-container.image-full {
+  max-width: 100%;
+}
+
+/* Image wrapper layouts */
+.image-wrapper {
+  margin-bottom: 2rem;
+}
+
+/* Caption below image (default) */
+.image-bottom-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Caption above image */
+.image-top-caption {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1rem;
+}
+
+/* Caption beside image */
+.image-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.image-embed-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.image-caption-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.image-caption {
+  background: var(--light-bg);
+  border-left: 4px solid var(--secondary-color);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.0625rem;
+  color: var(--text-color);
+  line-height: 1.8;
+}
+
+.image-caption p {
+  margin: 0;
 }
 
 .lesson-content h1,
@@ -580,6 +821,35 @@ footer::before {
   .lesson-content {
     padding: 2rem 1.5rem;
     font-size: 1.125rem;
+  }
+
+  /* Stack side-by-side layouts on mobile */
+  .lesson-layout-side {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .video-side {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .image-side {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Images responsive sizes */
+  .image-container.image-small {
+    max-width: 100%;
+  }
+
+  .image-container.image-medium {
+    max-width: 100%;
+  }
+
+  .image-container.image-large {
+    max-width: 100%;
   }
 }
 

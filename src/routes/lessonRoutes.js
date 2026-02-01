@@ -1,8 +1,31 @@
 const express = require('express');
 const db = require('../database/database');
 const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
 
 const router = express.Router();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure multer for image uploads (memory storage for Cloudinary)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // PUBLIC: Get lessons by unit ID
 router.get('/unit/:unitId', async (req, res) => {
@@ -27,7 +50,19 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Lesson not found' });
     }
     
-    res.json(lesson);
+    // Get all videos for this lesson
+    const videos = await db.all(
+      'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
+      [lesson.id]
+    );
+    
+    // Get all images for this lesson
+    const images = await db.all(
+      'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
+      [lesson.id]
+    );
+    
+    res.json({ ...lesson, videos, images });
   } catch (error) {
     console.error('Error fetching lesson:', error);
     res.status(500).json({ error: 'Server error' });
@@ -54,7 +89,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // ADMIN: Create lesson
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { title, unit_id, content } = req.body;
+    const { title, unit_id, content, videos, images } = req.body;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Lesson title is required' });
@@ -75,8 +110,42 @@ router.post('/', authenticateToken, async (req, res) => {
       [title.trim(), unit_id, content || '']
     );
 
+    // Insert videos if provided
+    if (videos && Array.isArray(videos)) {
+      for (let i = 0; i < videos.length; i++) {
+        const v = videos[i];
+        if (v.video_url) {
+          await db.run(
+            'INSERT INTO videos (lesson_id, video_url, position, size, explanation, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+            [result.id, v.video_url, v.video_position || 'bottom', v.video_size || 'large', v.video_explanation || null, i]
+          );
+        }
+      }
+    }
+
+    // Insert images if provided
+    if (images && Array.isArray(images)) {
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (img.image_path) {
+          await db.run(
+            'INSERT INTO images (lesson_id, image_path, position, size, caption, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+            [result.id, img.image_path, img.image_position || 'bottom', img.image_size || 'medium', img.image_caption || null, i]
+          );
+        }
+      }
+    }
+
     const newLesson = await db.get('SELECT * FROM lessons WHERE id = ?', [result.id]);
-    res.status(201).json(newLesson);
+    const lessonsVideos = await db.all(
+      'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
+      [result.id]
+    );
+    const lessonsImages = await db.all(
+      'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
+      [result.id]
+    );
+    res.status(201).json({ ...newLesson, videos: lessonsVideos, images: lessonsImages });
   } catch (error) {
     console.error('Error creating lesson:', error);
     res.status(500).json({ error: 'Server error' });
@@ -86,7 +155,7 @@ router.post('/', authenticateToken, async (req, res) => {
 // ADMIN: Update lesson
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
-    const { title, unit_id, content } = req.body;
+    const { title, unit_id, content, videos, images } = req.body;
     const { id } = req.params;
 
     if (!title || title.trim() === '') {
@@ -112,10 +181,76 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Lesson not found' });
     }
 
+    // Handle videos: delete old ones and insert new ones
+    if (videos && Array.isArray(videos)) {
+      await db.run('DELETE FROM videos WHERE lesson_id = ?', [id]);
+      for (let i = 0; i < videos.length; i++) {
+        const v = videos[i];
+        if (v.video_url) {
+          await db.run(
+            'INSERT INTO videos (lesson_id, video_url, position, size, explanation, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, v.video_url, v.video_position || 'bottom', v.video_size || 'large', v.video_explanation || null, i]
+          );
+        }
+      }
+    }
+
+    // Handle images: delete old ones and insert new ones
+    if (images && Array.isArray(images)) {
+      await db.run('DELETE FROM images WHERE lesson_id = ?', [id]);
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (img.image_path) {
+          await db.run(
+            'INSERT INTO images (lesson_id, image_path, position, size, caption, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, img.image_path, img.image_position || 'bottom', img.image_size || 'medium', img.image_caption || null, i]
+          );
+        }
+      }
+    }
+
     const updatedLesson = await db.get('SELECT * FROM lessons WHERE id = ?', [id]);
-    res.json(updatedLesson);
+    const lessonsVideos = await db.all(
+      'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
+      [id]
+    );
+    const lessonsImages = await db.all(
+      'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
+      [id]
+    );
+    res.json({ ...updatedLesson, videos: lessonsVideos, images: lessonsImages });
   } catch (error) {
     console.error('Error updating lesson:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ADMIN: Upload image
+router.post('/upload-image', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const uploadFromBuffer = () => new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'educational-content-system/lesson-images',
+          resource_type: 'image'
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+    });
+
+    const result = await uploadFromBuffer();
+
+    res.json({ imagePath: result.secure_url });
+  } catch (error) {
+    console.error('Error uploading image:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

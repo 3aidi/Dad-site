@@ -97,23 +97,84 @@ const api = {
 const router = new Router();
 const app = document.getElementById('app');
 
-// Home Page
+// Home Page - Show all classes with their units grouped
 router.on('/', async () => {
-  app.innerHTML = `
-    <h1 class="page-title">مرحبًا بكم أعزائي الطلاب</h1>
-    <p class="page-subtitle">هنا ستجدون جميع الدروس والمحتوى التعليمي المنظم حسب الصفوف والوحدات لمساعدتكم في دراستكم</p>
+  try {
+    app.innerHTML = `<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل المحتوى...</span></div>`;
     
-    <div class="cards-grid">
-      <div class="card" onclick="router.navigate('/classes')">
-        <h3>الصفوف الدراسية</h3>
-        <p>استكشفوا جميع الصفوف الدراسية المتاحة ومحتوياتها التعليمية المتميزة</p>
+    // Fetch all classes
+    const classes = await api.get('/api/classes');
+    
+    if (classes.length === 0) {
+      app.innerHTML = `
+        <h1 class="page-title">مرحبًا بكم أعزائي الطلاب</h1>
+        <p class="page-subtitle">لا يوجد محتوى متاح حاليًا. يرجى العودة لاحقًا.</p>
+      `;
+      return;
+    }
+    
+    // Fetch units for all classes
+    const allUnits = await api.get('/api/units');
+    
+    // Group units by classId
+    const unitsByClass = {};
+    allUnits.forEach(unit => {
+      if (!unitsByClass[unit.class_id]) {
+        unitsByClass[unit.class_id] = [];
+      }
+      unitsByClass[unit.class_id].push(unit);
+    });
+    
+    // Build HTML for each class with its units
+    let classesHTML = '';
+    
+    for (const cls of classes) {
+      const classUnits = unitsByClass[cls.id] || [];
+      
+      let unitsHTML = '';
+      if (classUnits.length > 0) {
+        unitsHTML = classUnits.map(unit => `
+          <div class="list-item" onclick="router.navigate('/unit/${unit.id}')">
+            <h4>${escapeHtml(unit.title)}</h4>
+            ${unit.description ? `<p>${escapeHtml(unit.description)}</p>` : ''}
+            <div class="list-item-icon">
+              <i class="fas fa-chevron-left"></i>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        unitsHTML = '<p style="color: #64748b; padding: 1rem; text-align: center;">لا توجد وحدات متاحة</p>';
+      }
+      
+      classesHTML += `
+        <div class="class-section" style="margin-bottom: 2.5rem;">
+          <div class="card" style="cursor: default; margin-bottom: 1rem; background: linear-gradient(135deg, #1e3a8a 0%, #0891b2 100%); color: white;">
+            <h2 style="color: white; margin: 0; font-size: 1.5rem;">${escapeHtml(cls.name)}</h2>
+          </div>
+          <div class="list-view">
+            ${unitsHTML}
+          </div>
+        </div>
+      `;
+    }
+    
+    app.innerHTML = `
+      <h1 class="page-title">مرحبًا بكم أعزائي الطلاب</h1>
+      <p class="page-subtitle">جميع الصفوف الدراسية والوحدات مرتبة ومنظمة لكم</p>
+      <div class="classes-container">
+        ${classesHTML}
       </div>
-      <div class="card" style="cursor: default; opacity: 0.7;">
-        <h3>حول المنصة</h3>
-        <p>منصة لعرض أعمالي التعليمية ومساعدة طلابي في المدرسة</p>
+    `;
+    
+  } catch (error) {
+    app.innerHTML = `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>خطأ في تحميل المحتوى</h3>
+        <p>${error.message}</p>
       </div>
-    </div>
-  `;
+    `;
+  }
 });
 
 // Classes List Page
@@ -173,7 +234,7 @@ router.on('/class/:id', async (classId) => {
 
     const breadcrumbs = `
       <div class="breadcrumbs">
-        <a href="/classes"><i class="fas fa-book-open"></i> الصفوف الدراسية</a>
+        <a href="/"><i class="fas fa-home"></i> الرئيسية</a>
         <span>«</span>
         <span>${escapeHtml(classData.name)}</span>
       </div>
@@ -237,7 +298,7 @@ router.on('/unit/:id', async (unitId) => {
 
     const breadcrumbs = `
       <div class="breadcrumbs">
-        <a href="/classes"><i class="fas fa-book-open"></i> الصفوف</a>
+        <a href="/"><i class="fas fa-home"></i> الرئيسية</a>
         <span>«</span>
         <a href="/class/${classData.id}">${escapeHtml(classData.name)}</a>
         <span>«</span>
@@ -258,13 +319,20 @@ router.on('/unit/:id', async (unitId) => {
       return;
     }
 
-    const lessonsHTML = lessons.map(lesson => `
-      <div class="list-item" onclick="router.navigate('/lesson/${lesson.id}')">
-        <div>
-          <h4>${escapeHtml(lesson.title)}</h4>
+    // Group lessons by section/order or display as modern cards
+    const lessonsHTML = lessons.map((lesson, index) => `
+      <div class="lesson-card" onclick="router.navigate('/lesson/${lesson.id}')">
+        <div class="lesson-card-number">${index + 1}</div>
+        <div class="lesson-card-content">
+          <h3 class="lesson-card-title">${escapeHtml(lesson.title)}</h3>
+          ${lesson.description ? `<p class="lesson-card-desc">${escapeHtml(lesson.description)}</p>` : ''}
+          <div class="lesson-card-meta">
+            <span class="lesson-card-icon"><i class="fas fa-book-open"></i></span>
+            <span class="lesson-card-action">ادخل الدرس</span>
+          </div>
         </div>
-        <div class="list-item-icon">
-          <i class="fas fa-chevron-left"></i>
+        <div class="lesson-card-arrow">
+          <i class="fas fa-arrow-left"></i>
         </div>
       </div>
     `).join('');
@@ -272,8 +340,8 @@ router.on('/unit/:id', async (unitId) => {
     app.innerHTML = `
       ${breadcrumbs}
       <h1 class="page-title">${escapeHtml(unit.title)}</h1>
-      <p class="page-subtitle">اختر درسًا لعرض محتواه</p>
-      <div class="list-view">
+      <p class="page-subtitle">جميع الدروس في هذه الوحدة</p>
+      <div class="lessons-modern-grid">
         ${lessonsHTML}
       </div>
     `;
@@ -299,7 +367,7 @@ router.on('/lesson/:id', async (lessonId) => {
 
     const breadcrumbs = `
       <div class="breadcrumbs">
-        <a href="/classes"><i class="fas fa-book-open"></i> الصفوف</a>
+        <a href="/"><i class="fas fa-home"></i> الرئيسية</a>
         <span>«</span>
         <a href="/class/${classData.id}">${escapeHtml(classData.name)}</a>
         <span>«</span>

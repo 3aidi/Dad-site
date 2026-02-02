@@ -2023,3 +2023,140 @@ footer::before {
     padding: 1.25rem;
   }
 }
+
+/* ==================== MODERN LESSON CARDS ==================== */
+.lessons-modern-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.lesson-card {
+  display: flex;
+  align-items: stretch;
+  cursor: pointer;
+  border-radius: 16px;
+  overflow: hidden;
+  background: white;
+  border: 2px solid var(--border-color);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.lesson-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-xl);
+}
+
+.lesson-card-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  min-width: 60px;
+  background: var(--gradient-primary);
+  color: white;
+  font-weight: 700;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.lesson-card-content {
+  flex: 1;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.lesson-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+  word-break: break-word;
+}
+
+.lesson-card-desc {
+  font-size: 0.9rem;
+  color: var(--light-text);
+  margin-bottom: 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lesson-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+.lesson-card-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.lesson-card-action {
+  text-decoration: none;
+}
+
+.lesson-card-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  min-width: 50px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%);
+  color: var(--secondary-color);
+  font-size: 1.2rem;
+  transition: all var(--transition-fast);
+}
+
+.lesson-card:hover .lesson-card-arrow {
+  background: var(--gradient-accent);
+  color: white;
+  transform: translateX(-4px);
+}
+
+/* Responsive adjustments for lesson cards */
+@media (max-width: 480px) {
+  .lessons-modern-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .lesson-card-number {
+    width: 50px;
+    font-size: 1.2rem;
+  }
+
+  .lesson-card-content {
+    padding: 1rem;
+  }
+
+  .lesson-card-title {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .lessons-modern-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .lessons-modern-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+

@@ -409,17 +409,28 @@ router.on('/admin/classes', async () => {
   try {
     const classes = await adminApi.get('/api/classes');
 
-    const tableRows = classes.length === 0 
-      ? '<tr><td colspan="3" class="empty-state"><div class="empty-state-icon"><i class="fas fa-book"></i></div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></td></tr>'
-      : classes.map(cls => `
-          <tr>
-            <td>${escapeHtml(cls.name || cls.name_ar)}</td>
-            <td>${new Date(cls.created_at).toLocaleDateString('ar-EG')}</td>
-            <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
-            </td>
-          </tr>
+    const classesHTML = classes.length === 0 
+      ? '<div class="empty-state" style="padding: 3rem; text-align: center;"><div class="empty-state-icon"><i class="fas fa-book"></i></div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></div>'
+      : classes.map((cls, index) => `
+          <div class="admin-class-card">
+            <div class="admin-class-card-header">
+              <div class="admin-class-card-info">
+                <h3 class="admin-class-card-title">${escapeHtml(cls.name || cls.name_ar)}</h3>
+                <p class="admin-class-card-date">
+                  <i class="fas fa-calendar-alt"></i>
+                  ${new Date(cls.created_at).toLocaleDateString('ar-SA')}
+                </p>
+              </div>
+            </div>
+            <div class="admin-class-card-actions">
+              <button class="btn btn-primary" onclick="editClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}');" title="تعديل الصف">
+                <i class="fas fa-edit"></i> تعديل
+              </button>
+              <button class="btn btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}');" title="حذف الصف">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
         `).join('');
 
     app.innerHTML = adminLayout(`
@@ -428,19 +439,8 @@ router.on('/admin/classes', async () => {
         <button class="btn btn-primary" onclick="showCreateClassForm()"><i class="fas fa-plus"></i> صف جديد</button>
       </div>
       <div class="admin-content">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>اسم الصف</th>
-                <th>تاريخ الإنشاء</th>
-                <th>الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
+        <div class="admin-classes-grid">
+          ${classesHTML}
         </div>
       </div>
     `, 'classes');
@@ -612,7 +612,7 @@ window.deleteClass = async function(id, name) {
   }
 };
 
-// Units Management (similar pattern - continuing in next part)
+// Units Management
 router.on('/admin/units', async () => {
   try {
     const [units, classes] = await Promise.all([
@@ -622,19 +622,62 @@ router.on('/admin/units', async () => {
 
     window.availableClasses = classes;
 
-    const tableRows = units.length === 0 
-      ? '<tr><td colspan="4" class="empty-state"><div class="empty-state-icon"><i class="fas fa-folder"></i></div><p>لا توجد وحدات دراسية بعد. قم بإنشاء وحدة دراسية أولى!</p></td></tr>'
-      : units.map(unit => `
-          <tr>
-            <td>${escapeHtml(unit.title || unit.title_ar)}</td>
-            <td>${escapeHtml(unit.class_name)}</td>
-            <td>${new Date(unit.created_at).toLocaleDateString('ar-EG')}</td>
-            <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}', ${unit.class_id})"><i class="fas fa-edit"></i> تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
-            </td>
-          </tr>
+    // Group units by class
+    const unitsByClass = {};
+    units.forEach(unit => {
+      if (!unitsByClass[unit.class_id]) {
+        unitsByClass[unit.class_id] = [];
+      }
+      unitsByClass[unit.class_id].push(unit);
+    });
+
+    // Create grouped HTML with modern cards
+    let groupedHTML = '';
+    if (classes.length === 0) {
+      groupedHTML = '<div class="alert alert-info">قم بإنشاء صف دراسي أولا قبل إضافة الوحدات.</div>';
+    } else if (units.length === 0) {
+      groupedHTML = '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-folder"></i></div><p>لا توجد وحدات دراسية بعد. قم بإنشاء وحدة دراسية أولى!</p></div>';
+    } else {
+      groupedHTML = classes.map(cls => {
+        const classUnits = unitsByClass[cls.id] || [];
+        
+        if (classUnits.length === 0) return ''; // Skip classes with no units
+        
+        const unitsHTML = classUnits.map((unit, idx) => `
+          <div class="admin-unit-card">
+            <div class="admin-unit-badge">${idx + 1}</div>
+            <div class="admin-unit-main">
+              <h4 class="admin-unit-title">${escapeHtml(unit.title || unit.title_ar)}</h4>
+              <p class="admin-unit-meta">
+                <i class="fas fa-calendar-alt"></i>
+                ${new Date(unit.created_at).toLocaleDateString('ar-SA')}
+              </p>
+            </div>
+            <div class="admin-unit-buttons">
+              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}', ${unit.class_id});" title="تعديل">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}');" title="حذف">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
         `).join('');
+
+        return `
+          <div class="admin-class-group">
+            <div class="admin-class-header">
+              <i class="fas fa-book"></i>
+              <h3>${escapeHtml(cls.name || cls.name_ar)}</h3>
+              <span class="admin-unit-count">${classUnits.length}</span>
+            </div>
+            <div class="admin-units-list">
+              ${unitsHTML}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
@@ -642,21 +685,8 @@ router.on('/admin/units', async () => {
         <button class="btn btn-primary" onclick="showCreateUnitForm()"><i class="fas fa-plus"></i> وحدة جديدة</button>
       </div>
       <div class="admin-content">
-        ${classes.length === 0 ? '<div class="alert alert-info">قم بإنشاء صف دراسي أولا قبل إضافة الوحدات.</div>' : ''}
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>عنوان الوحدة</th>
-                <th>Class</th>
-                <th>تاريخ الإنشاء</th>
-                <th>الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
+        <div class="admin-grouped-units">
+          ${groupedHTML}
         </div>
       </div>
     `, 'units');
@@ -870,20 +900,37 @@ router.on('/admin/lessons', async () => {
 
     window.availableUnits = units;
 
-    const tableRows = lessons.length === 0 
-      ? '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><p>لا توجد دروس بعد. قم بإنشاء درس أول!</p></td></tr>'
-      : lessons.map(lesson => `
-          <tr>
-            <td>${escapeHtml(lesson.title || lesson.title_ar)}</td>
-            <td>${escapeHtml(lesson.unit_title)}</td>
-            <td>${escapeHtml(lesson.class_name)}</td>
-            <td>${new Date(lesson.created_at).toLocaleDateString()}</td>
-            <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})"><i class="fas fa-edit"></i> تعديل</button>
-              <button class="btn btn-sm btn-info" onclick="manageQuestions(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-question-circle"></i> الأسئلة</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
-            </td>
-          </tr>
+    // Create modern admin cards with action buttons
+    const lessonsHTML = lessons.length === 0 
+      ? '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><p>لا توجد دروس بعد. قم بإنشاء درس أول!</p></div>'
+      : lessons.map((lesson, index) => `
+          <div class="admin-lesson-card">
+            <div class="admin-card-header">
+              <div class="admin-card-number">${index + 1}</div>
+              <div class="admin-card-info">
+                <h3 class="admin-card-title">${escapeHtml(lesson.title || lesson.title_ar)}</h3>
+                <p class="admin-card-meta">
+                  <span class="admin-badge-unit">${escapeHtml(lesson.unit_title)}</span>
+                  <span class="admin-badge-class">${escapeHtml(lesson.class_name)}</span>
+                </p>
+              </div>
+            </div>
+            <div class="admin-card-date">
+              <i class="fas fa-calendar-alt"></i>
+              ${new Date(lesson.created_at).toLocaleDateString('ar-SA')}
+            </div>
+            <div class="admin-card-actions">
+              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})" title="تعديل الدرس">
+                <i class="fas fa-edit"></i> تعديل
+              </button>
+              <button class="btn btn-sm btn-info" onclick="manageQuestions(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}');" title="إدارة الأسئلة">
+                <i class="fas fa-question-circle"></i> أسئلة
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}');" title="حذف الدرس">
+                <i class="fas fa-trash"></i> حذف
+              </button>
+            </div>
+          </div>
         `).join('');
 
     app.innerHTML = adminLayout(`
@@ -893,21 +940,8 @@ router.on('/admin/lessons', async () => {
       </div>
       <div class="admin-content">
         ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا قبل إضافة الدروس.</div>' : ''}
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>عنوان الدرس</th>
-                <th>Unit</th>
-                <th>Class</th>
-                <th>تاريخ الإنشاء</th>
-                <th>الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
+        <div class="admin-lessons-grid">
+          ${lessonsHTML}
         </div>
       </div>
     `, 'lessons');

@@ -129,8 +129,15 @@ const adminApi = {
       }
       if (!response.ok) {
         const errorData = await safeParseJson(response);
-        const error = new Error(errorData.error || 'فشل التحديث');
-        error.apiError = errorData;  // Preserve full error data
+        console.error('PUT Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          errorData: errorData
+        });
+        const error = new Error(errorData.error || `فشل التحديث (${response.status})`);
+        error.apiError = errorData;
+        error.status = response.status;
         throw error;
       }
       return safeParseJson(response);
@@ -1289,17 +1296,26 @@ window.editLesson = async function(id) {
         console.error('Save lesson error:', {
           message: error.message,
           apiError: error.apiError,
+          status: error.status,
           fullError: error
         });
         errorDiv.style.display = 'block';
         let errorText = error.message;
         if (error.apiError?.details) {
-          errorText += ': ' + error.apiError.details;
+          errorText += '\n\nتفاصيل: ' + error.apiError.details;
         }
         if (error.apiError?.stage) {
-          errorText += ` (${error.apiError.stage})`;
+          errorText += '\n\nمرحلة الخطأ: ' + error.apiError.stage;
+        }
+        if (error.apiError?.code) {
+          errorText += '\n\nرمز: ' + error.apiError.code;
+        }
+        // Show any error info we can get
+        if (error.status === 500 && !error.apiError?.details) {
+          errorText += '\n\nالرجاء فتح وحدة تحكم المتصفح (F12) والتحقق من التفاصيل الكاملة';
         }
         errorMsg.textContent = errorText;
+        errorMsg.style.whiteSpace = 'pre-wrap';
       }
     });
   } catch (error) {

@@ -240,6 +240,7 @@ function adminLayout(content, activeNav) {
           <h2>الأستاذ سعد العايدي</h2>
           <p>معلم دراسات اجتماعية</p>
           <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.25rem;">مدرسة أبو فراس الحمداني للتعليم الأساسي</p>
+          <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.15rem;">سلطنة عمان 🇴🇲</p>
         </div>
         <nav>
           <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/dashboard')">
@@ -314,6 +315,7 @@ router.on('/admin/login', async () => {
         <div class="container">
           <div class="heading">تسجيل الدخول</div>
           <p class="welcome-text">معلم دراسات اجتماعية - مدرسة أبو فراس الحمداني</p>
+          <p class="welcome-text" style="font-size: 0.8rem; margin-top: 0.25rem;">سلطنة عمان 🇴🇲</p>
             <form id="login-form" class="form" onsubmit="return false;">
               <input required class="input" type="text" name="username" id="username" placeholder="اسم المستخدم" />
               <input required class="input" type="password" name="password" id="password" placeholder="كلمة المرور" />

@@ -371,25 +371,41 @@ router.on('/admin/dashboard', async () => {
       </div>
       <div class="admin-content">
         <div class="stats-grid">
-          <div class="stat-card">
-            <h3>الصفوف الدراسية</h3>
-            <div class="number">${classes.length}</div>
+          <div class="stat-card stat-card-clickable" onclick="router.navigate('/admin/classes')">
+            <div class="stat-card-content">
+              <div class="stat-card-icon">
+                <i class="fas fa-book-open"></i>
+              </div>
+              <div class="stat-card-info">
+                <h3>الصفوف الدراسية</h3>
+                <div class="number">${classes.length}</div>
+              </div>
+              <p class="stat-card-action">انقر للإدارة <i class="fas fa-arrow-left"></i></p>
+            </div>
           </div>
-          <div class="stat-card">
-            <h3>الوحدات الدراسية</h3>
-            <div class="number">${units.length}</div>
+          <div class="stat-card stat-card-clickable" onclick="router.navigate('/admin/units')">
+            <div class="stat-card-content">
+              <div class="stat-card-icon">
+                <i class="fas fa-folder-open"></i>
+              </div>
+              <div class="stat-card-info">
+                <h3>الوحدات الدراسية</h3>
+                <div class="number">${units.length}</div>
+              </div>
+              <p class="stat-card-action">انقر للإدارة <i class="fas fa-arrow-left"></i></p>
+            </div>
           </div>
-          <div class="stat-card">
-            <h3>الدروس</h3>
-            <div class="number">${lessons.length}</div>
-          </div>
-        </div>
-        <div class="quick-actions">
-          <h3>إجراءات سريعة</h3>
-          <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="router.navigate('/admin/classes')"><i class="fas fa-book-open"></i> إدارة الصفوف</button>
-            <button class="btn btn-primary" onclick="router.navigate('/admin/units')"><i class="fas fa-folder-open"></i> إدارة الوحدات</button>
-            <button class="btn btn-primary" onclick="router.navigate('/admin/lessons')"><i class="fas fa-file-alt"></i> إدارة الدروس</button>
+          <div class="stat-card stat-card-clickable" onclick="router.navigate('/admin/lessons')">
+            <div class="stat-card-content">
+              <div class="stat-card-icon">
+                <i class="fas fa-file-alt"></i>
+              </div>
+              <div class="stat-card-info">
+                <h3>الدروس</h3>
+                <div class="number">${lessons.length}</div>
+              </div>
+              <p class="stat-card-action">انقر للإدارة <i class="fas fa-arrow-left"></i></p>
+            </div>
           </div>
         </div>
       </div>

@@ -49,38 +49,45 @@ router.get('/unit/:unitId', async (req, res) => {
 // PUBLIC: Get single lesson with full content
 router.get('/:id', async (req, res) => {
   try {
-    console.log('[GET /api/lessons/:id] Request for lesson ID:', req.params.id);
-    
-    const lesson = await db.get('SELECT * FROM lessons WHERE id = ?', [req.params.id]);
-    console.log('[GET /api/lessons/:id] Lesson found:', lesson ? 'Yes' : 'No');
+    const id = req.params.id;
+    const lesson = await db.get('SELECT * FROM lessons WHERE id = ?', [id]);
     
     if (!lesson) {
-      console.log('[GET /api/lessons/:id] Lesson not found, returning 404');
-      return res.status(404).json({ error: 'الدرس غير موجود', message: 'Lesson not found' });
+      return res.status(404).json({ error: 'الدرس غير موجود' });
     }
     
-    console.log('[GET /api/lessons/:id] Fetching videos...');
-    // Get all videos for this lesson
-    const videos = await db.all(
-      'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
-      [lesson.id]
-    );
-    console.log('[GET /api/lessons/:id] Videos found:', videos.length);
+    let videos = [];
+    let images = [];
     
-    console.log('[GET /api/lessons/:id] Fetching images...');
-    // Get all images for this lesson
-    const images = await db.all(
-      'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
-      [lesson.id]
-    );
-    console.log('[GET /api/lessons/:id] Images found:', images.length);
+    try {
+      videos = await db.all(
+        'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
+        [lesson.id]
+      ) || [];
+    } catch (videoErr) {
+      console.error('Error fetching videos:', videoErr.message);
+    }
     
-    console.log('[GET /api/lessons/:id] Success, returning data');
-    res.json({ ...lesson, videos, images });
+    try {
+      images = await db.all(
+        'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
+        [lesson.id]
+      ) || [];
+    } catch (imageErr) {
+      console.error('Error fetching images:', imageErr.message);
+    }
+    
+    res.json({ 
+      ...lesson, 
+      videos: videos || [],
+      images: images || []
+    });
   } catch (error) {
-    console.error('[GET /api/lessons/:id] ERROR:', error.message);
-    console.error('[GET /api/lessons/:id] Stack:', error.stack);
-    res.status(500).json({ error: 'خطأ في الخادم', message: error.message, details: error.toString() });
+    console.error('Error in GET /api/lessons/:id:', error);
+    res.status(500).json({ 
+      error: 'خطأ في الخادم',
+      details: error.message 
+    });
   }
 });
 

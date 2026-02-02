@@ -235,10 +235,11 @@ function adminLayout(content, activeNav) {
       <aside class="sidebar" id="adminSidebar">
         <div class="sidebar-header">
           <div class="logo">
-            <i class="fas fa-graduation-cap"></i>
+            <i class="fas fa-globe-asia"></i>
           </div>
           <h2>الأستاذ سعد العايدي</h2>
-          <p>إدارة المحتوى التعليمي</p>
+          <p>معلم دراسات اجتماعية</p>
+          <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.25rem;">مدرسة أبو فراس الحمداني للتعليم الأساسي</p>
         </div>
         <nav>
           <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/dashboard')">
@@ -305,14 +306,14 @@ router.on('/admin/login', async () => {
     <div class="login-container">
       <div class="welcome-header">
         <div class="teacher-badge">
-          <i class="fas fa-graduation-cap"></i>
+          <i class="fas fa-globe-asia"></i>
           <span>الأستاذ سعد عبد الفتاح العايدي</span>
         </div>
       </div>
       <div class="login-form-wrapper">
         <div class="container">
           <div class="heading">تسجيل الدخول</div>
-
+          <p class="welcome-text">معلم دراسات اجتماعية - مدرسة أبو فراس الحمداني</p>
             <form id="login-form" class="form" onsubmit="return false;">
               <input required class="input" type="text" name="username" id="username" placeholder="اسم المستخدم" />
               <input required class="input" type="password" name="password" id="password" placeholder="كلمة المرور" />

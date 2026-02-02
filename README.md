@@ -20,12 +20,14 @@ This system provides a public-facing educational website with a private admin da
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Node.js** with Express.js
 - **SQLite** database
 - **JWT** authentication with httpOnly cookies
 - **bcrypt** for password hashing
 
 ### Frontend
+
 - **HTML5** & **CSS3**
 - **Vanilla JavaScript** (no frameworks)
 - Client-side routing for SPA experience
@@ -68,21 +70,25 @@ educational-content-system/
 ### Installation
 
 1. **Navigate to the project directory**:
+
    ```powershell
    cd c:\educational-content-system
    ```
 
 2. **Install dependencies**:
+
    ```powershell
    npm install
    ```
 
 3. **Create environment file**:
+
    ```powershell
    Copy-Item .env.example .env
    ```
 
 4. **Edit `.env` file** and set your configuration:
+
    ```env
    PORT=3000
    JWT_SECRET=your-super-secret-jwt-key-CHANGE-THIS
@@ -93,18 +99,20 @@ educational-content-system/
    ⚠️ **IMPORTANT**: Change the JWT_SECRET and ADMIN_PASSWORD to strong, unique values!
 
 5. **Initialize the database**:
+
    ```powershell
    npm run init-db
    ```
 
 6. **Start the server**:
+
    ```powershell
    npm start
    ```
 
 7. **Access the application**:
-   - Public Site: http://localhost:3000
-   - Admin Panel: http://localhost:3000/admin/login
+   - Public Site: <http://localhost:3000>
+   - Admin Panel: <http://localhost:3000/admin/login>
 
 ## 🔐 Security Features
 
@@ -176,11 +184,13 @@ lessons (
 ## 🔌 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/login` - Admin login
 - `POST /api/auth/logout` - Admin logout
 - `GET /api/auth/verify` - Verify authentication status
 
 ### Classes (Public & Admin)
+
 - `GET /api/classes` - Get all classes (public)
 - `GET /api/classes/:id` - Get single class (public)
 - `POST /api/classes` - Create class (admin only)
@@ -188,6 +198,7 @@ lessons (
 - `DELETE /api/classes/:id` - Delete class (admin only)
 
 ### Units (Public & Admin)
+
 - `GET /api/units/class/:classId` - Get units by class (public)
 - `GET /api/units/:id` - Get single unit (public)
 - `GET /api/units` - Get all units with relations (admin only)
@@ -196,6 +207,7 @@ lessons (
 - `DELETE /api/units/:id` - Delete unit (admin only)
 
 ### Lessons (Public & Admin)
+
 - `GET /api/lessons/unit/:unitId` - Get lessons by unit (public)
 - `GET /api/lessons/:id` - Get single lesson (public)
 - `GET /api/lessons` - Get all lessons with relations (admin only)
@@ -206,12 +218,14 @@ lessons (
 ## 👥 User Roles
 
 ### Viewer (Public User)
+
 - No login required
 - Can view classes, units, and lessons
 - Read-only access
 - Cannot modify any data
 
 ### Admin (Teacher)
+
 - Login required
 - Full CRUD permissions
 - Manage all content
@@ -220,23 +234,27 @@ lessons (
 ## 🎨 Admin Dashboard Features
 
 ### Dashboard
+
 - Content overview statistics
 - Quick action buttons
 - Summary of classes, units, and lessons
 
 ### Classes Management
+
 - View all classes in a table
 - Create new classes
 - Edit existing classes
 - Delete classes (cascades to units and lessons)
 
 ### Units Management
+
 - View all units with their classes
 - Create units with class selection
 - Edit unit details
 - Delete units (cascades to lessons)
 
 ### Lessons Management
+
 - View all lessons with unit and class info
 - Create lessons with unit selection
 - Edit lesson title, content, and unit
@@ -270,6 +288,7 @@ lessons (
 ### Quick Deployment
 
 For detailed production deployment instructions, see:
+
 - **[DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)** - Complete pre-deployment checklist
 - **[PRODUCTION-DEPLOY.md](PRODUCTION-DEPLOY.md)** - Step-by-step deployment guides
 
@@ -293,16 +312,19 @@ npm run generate-secrets
 ### Recommended Hosting
 
 **Backend Options**:
+
 - Render.com (free tier available)
 - Railway.app (free tier available)
 - Fly.io
 
 **Frontend Options** (if separated):
+
 - Cloudflare Pages (free)
 - Netlify (free tier)
 - Vercel (free tier)
 
 **All-in-One Option**:
+
 - Deploy both frontend and backend to Render.com (simplest)
 
 ### Environment Variables for Production
@@ -329,14 +351,14 @@ For production, you MUST use HTTPS. The httpOnly cookie security depends on it.
 
 ### Test Public Access
 
-1. Open http://localhost:3000
+1. Open <http://localhost:3000>
 2. Click "Browse Classes"
 3. Navigate through Class → Unit → Lesson hierarchy
 4. Verify you can only read content
 
 ### Test Admin Access
 
-1. Open http://localhost:3000/admin/login
+1. Open <http://localhost:3000/admin/login>
 2. Login with credentials from `.env`
 3. Test creating a class
 4. Test creating a unit under that class
@@ -357,9 +379,11 @@ For production, you MUST use HTTPS. The httpOnly cookie security depends on it.
 
 1. Hash a new password using bcrypt
 2. Update the database directly:
+
    ```sql
    UPDATE admins SET password_hash = 'new_hashed_password' WHERE username = 'admin';
    ```
+
 3. Or delete the database and run `npm run init-db` with new credentials in `.env`
 
 ### Backup Database
@@ -378,19 +402,23 @@ npm run init-db
 ## 🐛 Troubleshooting
 
 ### "EADDRINUSE" Error
+
 Port 3000 is already in use. Change `PORT` in `.env` or stop the other process.
 
 ### Cannot Login to Admin
+
 - Verify credentials in `.env` match what you're entering
 - Check if database was initialized correctly
 - Run `npm run init-db` again if needed
 
 ### "Authentication required" on Admin Pages
+
 - Clear your cookies
 - Login again at `/admin/login`
 - Check browser console for errors
 
 ### Database Errors
+
 - Ensure database.db file exists
 - Check file permissions
 - Run `npm run init-db` to recreate database
@@ -398,17 +426,20 @@ Port 3000 is already in use. Change `PORT` in `.env` or stop the other process.
 ## 📚 Additional Notes
 
 ### Why SQLite?
+
 - Simple setup (no separate database server)
 - Perfect for small to medium sites
 - Can migrate to PostgreSQL/MySQL later if needed
 
 ### Why Vanilla JavaScript?
+
 - No build process required
 - Faster load times
 - Easier to understand and modify
 - No framework lock-in
 
 ### Why httpOnly Cookies?
+
 - Prevents XSS attacks from stealing tokens
 - Browser automatically sends with requests
 - More secure than localStorage
@@ -416,6 +447,7 @@ Port 3000 is already in use. Change `PORT` in `.env` or stop the other process.
 ## 🤝 Contributing
 
 This is a production-ready template. Feel free to extend it with:
+
 - Rich text editor for lesson content
 - Image uploads
 - Video embeds
@@ -430,6 +462,7 @@ MIT License - Use freely for educational purposes
 ## 🆘 Support
 
 For issues or questions:
+
 1. Check this README
 2. Review the code comments
 3. Check console errors

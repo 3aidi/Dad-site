@@ -226,7 +226,13 @@ function showConfirmModal(title, message) {
 function adminLayout(content, activeNav) {
   return `
     <div class="admin-layout">
-      <aside class="sidebar">
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+      <aside class="sidebar" id="adminSidebar">
         <div class="sidebar-header">
           <div class="logo">
             <i class="fas fa-graduation-cap"></i>
@@ -270,6 +276,19 @@ async function logout() {
     router.navigate('/admin/login');
   } catch (error) {
     console.error('Logout error:', error);
+  }
+}
+
+// Toggle Sidebar for Mobile
+function toggleSidebar() {
+  const sidebar = document.getElementById('adminSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const hamburger = document.getElementById('hamburgerBtn');
+  
+  if (sidebar && overlay && hamburger) {
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+    hamburger.classList.toggle('active');
   }
 }
 

@@ -304,12 +304,7 @@ router.on('/admin/login', async () => {
   
   app.innerHTML = `
     <div class="login-container">
-      <div class="welcome-header">
-        <div class="teacher-badge">
-          <i class="fas fa-globe-asia"></i>
-          <span>الأستاذ سعد عبد الفتاح العايدي</span>
-        </div>
-      </div>
+      <div class="teacher-name-bg">سعد عبد الفتاح العايدي</div>
       <div class="login-form-wrapper">
         <div class="container">
           <div class="heading">تسجيل الدخول</div>

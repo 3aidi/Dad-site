@@ -4,8 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة التحكم - منصة الأستاذ سعد عبد الفتاح العايدي</title>
-  <link rel="stylesheet" href="/shared-styles.css">
-  <link rel="stylesheet" href="/admin-styles.css">
+  
+  <!-- Cache Control: Prevent HTML caching -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
+  <!-- Static assets with cache-busting version parameter -->
+  <script src="/version.js"></script>
+  <link rel="stylesheet" href="/shared-styles.css?v=1.0.0">
+  <link rel="stylesheet" href="/admin-styles.css?v=1.0.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +27,8 @@
     </div>
   </div>
 
-  <script src="/config.js"></script>
-  <script src="/admin.js"></script>
+  <!-- JavaScript files with cache-busting version parameters -->
+  <script src="/config.js?v=1.0.0"></script>
+  <script src="/admin.js?v=1.0.0"></script>
 </body>
 </html>

@@ -128,11 +128,34 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Serve static files
+// Cache Control Middleware
+// Static assets (CSS, JS, images) are cached but use versioning for cache-busting
+// HTML files are never cached to ensure users always get the latest version
 const isProd = process.env.NODE_ENV === 'production';
+
+app.use((req, res, next) => {
+  const path = req.path.toLowerCase();
+  
+  // Never cache HTML files - always fetch fresh
+  if (path.endsWith('.html') || path === '/' || path.startsWith('/admin')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  // Cache static assets (CSS, JS, fonts, images) for 7 days in production
+  // These use version query parameters for cache-busting (e.g., style.css?v=1.0.1)
+  else if (path.match(/\.(css|js|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$/)) {
+    const maxAge = isProd ? 7 * 24 * 60 * 60 : 0; // 7 days in seconds for production
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
+  }
+  
+  next();
+});
+
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
-  maxAge: isProd ? '7d' : 0
+  maxAge: 0 // We handle caching in the middleware above
 }));
 
 // API Routes
@@ -143,11 +166,19 @@ app.use('/api/lessons', lessonRoutes);
 
 // Serve admin pages (protected on API level)
 app.get('/admin/*', (req, res) => {
+  // Set headers to prevent HTML caching
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // Serve public pages
 app.get('*', (req, res) => {
+  // Set headers to prevent HTML caching
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

@@ -59,7 +59,7 @@ class Router {
           <i class="fas fa-exclamation-triangle"></i>
           <h3>خطأ</h3>
           <p>${message}</p>
-          <button onclick="location.href='/'" class="btn">العودة للرئيسية</button>
+          <button type="button" class="btn" data-action="go-home">العودة للرئيسية</button>
         </div>
       `;
     }
@@ -134,7 +134,7 @@ router.on('/', async () => {
       let unitsHTML = '';
       if (classUnits.length > 0) {
         unitsHTML = classUnits.map(unit => `
-          <div class="list-item" onclick="router.navigate('/unit/${unit.id}')">
+          <div class="list-item" data-navigate="/unit/${unit.id}" role="button" tabindex="0">
             <h4>${escapeHtml(unit.title)}</h4>
             ${unit.description ? `<p>${escapeHtml(unit.description)}</p>` : ''}
             <div class="list-item-icon">
@@ -198,7 +198,7 @@ router.on('/classes', async () => {
     }
 
     const classesHTML = classes.map(cls => `
-      <div class="card" onclick="router.navigate('/class/${cls.id}')">
+      <div class="card" data-navigate="/class/${cls.id}" role="button" tabindex="0">
         <h3>${escapeHtml(cls.name)}</h3>
         <p>اضغط لعرض الوحدات الدراسية</p>
       </div>
@@ -254,10 +254,10 @@ router.on('/class/:id', async (classId) => {
     }
 
     const unitsHTML = units.map(unit => `
-      <div class="list-item" onclick="router.navigate('/unit/${unit.id}')">
-        <div>
-          <h4>${escapeHtml(unit.title)}</h4>
-        </div>
+<div class="list-item" data-navigate="/unit/${unit.id}" role="button" tabindex="0">
+            <div>
+              <h4>${escapeHtml(unit.title)}</h4>
+            </div>
         <div class="list-item-icon">
           <i class="fas fa-chevron-left"></i>
         </div>
@@ -321,7 +321,7 @@ router.on('/unit/:id', async (unitId) => {
 
     // Group lessons by section/order or display as modern cards
     const lessonsHTML = lessons.map((lesson, index) => `
-      <div class="lesson-card" onclick="router.navigate('/lesson/${lesson.id}')">
+      <div class="lesson-card" data-navigate="/lesson/${lesson.id}" role="button" tabindex="0">
         <div class="lesson-card-number">${index + 1}</div>
         <div class="lesson-card-content">
           <h3 class="lesson-card-title">${escapeHtml(lesson.title)}</h3>
@@ -588,14 +588,14 @@ async function loadQuestions(lessonId, container) {
                   <span class="option-text">${escapeHtml(q.option_d)}</span>
                 </label>
               </div>
-              <button class="btn btn-check-answer" onclick="checkAnswer(${q.id}, ${lessonId})">
+              <button type="button" class="btn btn-check-answer" data-action="check-answer" data-question-id="${q.id}" data-lesson-id="${lessonId}">
                 <i class="fas fa-check"></i> تحقق من الإجابة
               </button>
               <div class="answer-feedback" id="feedback-${q.id}"></div>
             </div>
           `).join('')}
         </div>
-        <button class="btn btn-submit-quiz" onclick="submitQuiz(${lessonId}, ${JSON.stringify(questions.map(q => q.id)).replace(/"/g, '&quot;')})">
+        <button type="button" class="btn btn-submit-quiz" data-action="submit-quiz" data-lesson-id="${lessonId}" data-question-ids="${JSON.stringify(questions.map(q => q.id)).replace(/"/g, '&quot;')}">
           <i class="fas fa-paper-plane"></i> إرسال جميع الإجابات
         </button>
       </div>
@@ -745,6 +745,51 @@ document.addEventListener('click', (e) => {
   if (e.target.tagName === 'A' && e.target.href.startsWith(window.location.origin)) {
     e.preventDefault();
     router.navigate(e.target.getAttribute('href'));
+  }
+});
+
+// Delegated click handler (CSP-friendly: no inline handlers)
+app.addEventListener('click', (e) => {
+  const nav = e.target.closest('[data-navigate]');
+  if (nav) {
+    e.preventDefault();
+    router.navigate(nav.getAttribute('data-navigate'));
+    return;
+  }
+  const goHome = e.target.closest('[data-action="go-home"]');
+  if (goHome) {
+    e.preventDefault();
+    location.href = '/';
+    return;
+  }
+  const checkBtn = e.target.closest('[data-action="check-answer"]');
+  if (checkBtn) {
+    e.preventDefault();
+    const qId = checkBtn.getAttribute('data-question-id');
+    const lessonId = checkBtn.getAttribute('data-lesson-id');
+    if (qId != null && lessonId != null) checkAnswer(parseInt(qId, 10), parseInt(lessonId, 10));
+    return;
+  }
+  const submitBtn = e.target.closest('[data-action="submit-quiz"]');
+  if (submitBtn) {
+    e.preventDefault();
+    const lessonId = submitBtn.getAttribute('data-lesson-id');
+    const idsStr = submitBtn.getAttribute('data-question-ids');
+    if (lessonId != null && idsStr != null) {
+      try {
+        submitQuiz(parseInt(lessonId, 10), JSON.parse(idsStr));
+      } catch (_) {}
+    }
+    return;
+  }
+});
+
+app.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const nav = e.target.closest('[data-navigate]');
+  if (nav) {
+    e.preventDefault();
+    router.navigate(nav.getAttribute('data-navigate'));
   }
 });
 

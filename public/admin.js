@@ -1,4 +1,4 @@
-﻿// Admin Router
+// Admin Router
 class AdminRouter {
   constructor() {
     this.routes = {};
@@ -199,16 +199,16 @@ function showConfirmModal(title, message) {
       <div class="modal-content" style="max-width: 400px;">
         <div class="modal-header">
           <h2>${escapeHtml(title)}</h2>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+          <button type="button" class="modal-close" data-action="modal-close">&times;</button>
         </div>
         <div style="padding: 1.5rem; color: #334155; line-height: 1.6;">
           ${message}
         </div>
         <div class="btn-group">
-          <button class="btn btn-danger" onclick="this.closest('.modal').remove(); window.confirmResult = true; window.dispatchEvent(new Event('confirmResolved'));">
+          <button type="button" class="btn btn-danger" data-action="confirm-yes">
             <i class="fas fa-trash"></i> نعم، احذفه
           </button>
-          <button class="btn btn-secondary" onclick="this.closest('.modal').remove(); window.confirmResult = false; window.dispatchEvent(new Event('confirmResolved'));">
+          <button type="button" class="btn btn-secondary" data-action="confirm-no">
             <i class="fas fa-times"></i> إلغاء
           </button>
         </div>
@@ -227,12 +227,12 @@ function showConfirmModal(title, message) {
 function adminLayout(content, activeNav) {
   return `
     <div class="admin-layout">
-      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<button type="button" class="hamburger" id="hamburgerBtn" data-action="toggle-sidebar">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay" data-action="toggle-sidebar" role="button" tabindex="0"></div>
       <aside class="sidebar" id="adminSidebar">
         <div class="sidebar-header">
           <div class="logo">
@@ -243,18 +243,18 @@ function adminLayout(content, activeNav) {
           <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.25rem;">مدرسة أبو فراس الحمداني للتعليم الأساسي</p>
         </div>
         <nav>
-          <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/dashboard')">
-            <i class="fas fa-chart-line"></i> لوحة المعلومات
-          </a>
-          <a href="/admin/classes" class="${activeNav === 'classes' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/classes')">
-            <i class="fas fa-book-open"></i> الصفوف الدراسية
-          </a>
-          <a href="/admin/units" class="${activeNav === 'units' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/units')">
-            <i class="fas fa-folder-open"></i> الوحدات الدراسية
-          </a>
-          <a href="/admin/lessons" class="${activeNav === 'lessons' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/lessons')">
-            <i class="fas fa-file-alt"></i> الدروس
-          </a>
+<a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}">
+          <i class="fas fa-chart-line"></i> لوحة المعلومات
+        </a>
+        <a href="/admin/classes" class="${activeNav === 'classes' ? 'active' : ''}">
+          <i class="fas fa-book-open"></i> الصفوف الدراسية
+        </a>
+        <a href="/admin/units" class="${activeNav === 'units' ? 'active' : ''}">
+          <i class="fas fa-folder-open"></i> الوحدات الدراسية
+        </a>
+        <a href="/admin/lessons" class="${activeNav === 'lessons' ? 'active' : ''}">
+          <i class="fas fa-file-alt"></i> الدروس
+        </a>
         </nav>
         <div class="sidebar-footer" dir="rtl">
           <p>مسجل الدخول:</p>
@@ -262,7 +262,7 @@ function adminLayout(content, activeNav) {
             <span>${router.currentUser?.username || 'مدير'}</span>
             <i class="fas fa-user-tie"></i>
           </div>
-          <button class="logout-badge" onclick="logout()">تسجيل الخروج <i class="fas fa-sign-out-alt"></i></button>
+          <button type="button" class="logout-badge" data-action="logout">تسجيل الخروج <i class="fas fa-sign-out-alt"></i></button>
         </div>
       </aside>
       <main class="admin-main">
@@ -310,7 +310,7 @@ router.on('/admin/login', async () => {
         <div class="container">
           <div class="heading">تسجيل الدخول</div>
           <p class="welcome-text">معلم دراسات اجتماعية - مدرسة أبو فراس الحمداني</p>
-            <form id="login-form" class="form" onsubmit="return false;">
+            <form id="login-form" class="form">
               <input required class="input" type="text" name="username" id="username" placeholder="اسم المستخدم" />
               <input required class="input" type="password" name="password" id="password" placeholder="كلمة المرور" />
               <span class="forgot-password"><a href="#">هل نسيت كلمة المرور؟</a></span>
@@ -388,9 +388,9 @@ router.on('/admin/dashboard', async () => {
         <div class="quick-actions">
           <h3>إجراءات سريعة</h3>
           <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="router.navigate('/admin/classes')"><i class="fas fa-book-open"></i> إدارة الصفوف</button>
-            <button class="btn btn-primary" onclick="router.navigate('/admin/units')"><i class="fas fa-folder-open"></i> إدارة الوحدات</button>
-            <button class="btn btn-primary" onclick="router.navigate('/admin/lessons')"><i class="fas fa-file-alt"></i> إدارة الدروس</button>
+            <button type="button" class="btn btn-primary" data-action="navigate" data-path="/admin/classes"><i class="fas fa-book-open"></i> إدارة الصفوف</button>
+            <button type="button" class="btn btn-primary" data-action="navigate" data-path="/admin/units"><i class="fas fa-folder-open"></i> إدارة الوحدات</button>
+            <button type="button" class="btn btn-primary" data-action="navigate" data-path="/admin/lessons"><i class="fas fa-file-alt"></i> إدارة الدروس</button>
           </div>
         </div>
       </div>
@@ -419,10 +419,10 @@ router.on('/admin/classes', async () => {
               </div>
             </div>
             <div class="admin-class-card-actions">
-              <button class="btn btn-primary" onclick="editClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}');" title="تعديل الصف">
+              <button type="button" class="btn btn-primary" data-action="edit-class" data-id="${cls.id}" data-name="${escapeHtml((cls.name || cls.name_ar)).replace(/"/g, '&quot;')}" title="تعديل الصف">
                 <i class="fas fa-edit"></i> تعديل
               </button>
-              <button class="btn btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}');" title="حذف الصف">
+              <button type="button" class="btn btn-danger" data-action="delete-class" data-id="${cls.id}" data-name="${escapeHtml((cls.name || cls.name_ar)).replace(/"/g, '&quot;')}" title="حذف الصف">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -432,7 +432,7 @@ router.on('/admin/classes', async () => {
     app.innerHTML = adminLayout(`
       <div class="admin-header">
         <h1>إدارة الصفوف الدراسية</h1>
-        <button class="btn btn-primary" onclick="showCreateClassForm()"><i class="fas fa-plus"></i> صف جديد</button>
+        <button type="button" class="btn btn-primary" data-action="show-create-class"><i class="fas fa-plus"></i> صف جديد</button>
       </div>
       <div class="admin-content">
         <div class="admin-classes-grid">
@@ -452,7 +452,7 @@ window.showCreateClassForm = function() {
     <div class="modal-content">
       <div class="modal-header">
         <h2>إضافة صف دراسي جديد</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        <button type="button" class="modal-close" data-action="modal-close">&times;</button>
       </div>
       <form id="create-class-form">
         <div class="form-group">
@@ -465,7 +465,7 @@ window.showCreateClassForm = function() {
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ الصف</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i> إلغاء</button>
+          <button type="button" class="btn btn-secondary" data-action="modal-close"><i class="fas fa-times"></i> إلغاء</button>
         </div>
       </form>
     </div>
@@ -525,7 +525,7 @@ window.editClass = function(id, name) {
     <div class="modal-content">
       <div class="modal-header">
         <h2>تعديل الصف الدراسي</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        <button type="button" class="modal-close" data-action="modal-close">&times;</button>
       </div>
       <form id="edit-class-form">
         <div class="form-group">
@@ -538,7 +538,7 @@ window.editClass = function(id, name) {
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التغييرات</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i> إلغاء</button>
+          <button type="button" class="btn btn-secondary" data-action="modal-close"><i class="fas fa-times"></i> إلغاء</button>
         </div>
       </form>
     </div>
@@ -650,10 +650,10 @@ router.on('/admin/units', async () => {
               </p>
             </div>
             <div class="admin-unit-buttons">
-              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}', ${unit.class_id});" title="تعديل">
+              <button type="button" class="btn btn-sm btn-primary" data-action="edit-unit" data-id="${unit.id}" data-title="${escapeHtml((unit.title || unit.title_ar)).replace(/"/g, '&quot;')}" data-class-id="${unit.class_id}" title="تعديل">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}');" title="حذف">
+              <button type="button" class="btn btn-sm btn-danger" data-action="delete-unit" data-id="${unit.id}" data-title="${escapeHtml((unit.title || unit.title_ar)).replace(/"/g, '&quot;')}" title="حذف">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -678,7 +678,7 @@ router.on('/admin/units', async () => {
     app.innerHTML = adminLayout(`
       <div class="admin-header">
         <h1>إدارة الوحدات الدراسية</h1>
-        <button class="btn btn-primary" onclick="showCreateUnitForm()"><i class="fas fa-plus"></i> وحدة جديدة</button>
+        <button type="button" class="btn btn-primary" data-action="show-create-unit"><i class="fas fa-plus"></i> وحدة جديدة</button>
       </div>
       <div class="admin-content">
         <div class="admin-grouped-units">
@@ -702,7 +702,7 @@ window.showCreateUnitForm = function() {
     <div class="modal-content">
       <div class="modal-header">
         <h2>إضافة وحدة دراسية جديدة</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        <button type="button" class="modal-close" data-action="modal-close">×</button>
       </div>
       <form id="create-unit-form">
         <div class="form-group">
@@ -722,7 +722,7 @@ window.showCreateUnitForm = function() {
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-success">حفظ الوحدة</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
+          <button type="button" class="btn btn-secondary" data-action="modal-close">إلغاء</button>
         </div>
       </form>
     </div>
@@ -794,7 +794,7 @@ window.editUnit = function(id, title, classId) {
     <div class="modal-content">
       <div class="modal-header">
         <h2>تعديل الوحدة</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        <button type="button" class="modal-close" data-action="modal-close">×</button>
       </div>
       <form id="edit-unit-form">
         <div class="form-group">
@@ -813,7 +813,7 @@ window.editUnit = function(id, title, classId) {
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
+          <button type="button" class="btn btn-secondary" data-action="modal-close">إلغاء</button>
         </div>
       </form>
     </div>
@@ -916,13 +916,13 @@ router.on('/admin/lessons', async () => {
               ${new Date(lesson.created_at).toLocaleDateString('ar-SA')}
             </div>
             <div class="admin-card-actions">
-              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})" title="تعديل الدرس">
+              <button type="button" class="btn btn-sm btn-primary" data-action="edit-lesson" data-id="${lesson.id}" title="تعديل الدرس">
                 <i class="fas fa-edit"></i> تعديل
               </button>
-              <button class="btn btn-sm btn-info" onclick="manageQuestions(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}');" title="إدارة الأسئلة">
+              <button type="button" class="btn btn-sm btn-info" data-action="manage-questions" data-id="${lesson.id}" data-title="${escapeHtml((lesson.title || lesson.title_ar)).replace(/"/g, '&quot;')}" title="إدارة الأسئلة">
                 <i class="fas fa-question-circle"></i> أسئلة
               </button>
-              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}');" title="حذف الدرس">
+              <button type="button" class="btn btn-sm btn-danger" data-action="delete-lesson" data-id="${lesson.id}" data-title="${escapeHtml((lesson.title || lesson.title_ar)).replace(/"/g, '&quot;')}" title="حذف الدرس">
                 <i class="fas fa-trash"></i> حذف
               </button>
             </div>
@@ -932,7 +932,7 @@ router.on('/admin/lessons', async () => {
     app.innerHTML = adminLayout(`
       <div class="admin-header">
         <h1>إدارة الدروس</h1>
-        <button class="btn btn-primary" onclick="showCreateLessonForm()"><i class="fas fa-plus"></i> درس جديد</button>
+        <button type="button" class="btn btn-primary" data-action="show-create-lesson"><i class="fas fa-plus"></i> درس جديد</button>
       </div>
       <div class="admin-content">
         ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا قبل إضافة الدروس.</div>' : ''}
@@ -957,7 +957,7 @@ window.showCreateLessonForm = function() {
     <div class="modal-content">
       <div class="modal-header">
         <h2>إضافة درس جديد</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        <button type="button" class="modal-close" data-action="modal-close">×</button>
       </div>
       <form id="create-lesson-form">
         <div class="form-group">
@@ -975,13 +975,13 @@ window.showCreateLessonForm = function() {
         <div class="form-group">
           <label><i class="fab fa-youtube"></i> الفيديوهات (اختياري)</label>
           <div id="videos-container"></div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addVideoField()">+ إضافة فيديو</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="add-video-field">+ إضافة فيديو</button>
           <small style="color: #64748b; display: block; margin-top: 0.5rem;">أضف فيديو واحد أو أكثر مع شرح منفصل لكل واحد</small>
         </div>
         <div class="form-group">
           <label><i class="fas fa-image"></i> الصور (اختياري)</label>
           <div id="images-container"></div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addImageField()">+ إضافة صورة</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="add-image-field">+ إضافة صورة</button>
           <small style="color: #64748b; display: block; margin-top: 0.5rem;">رفع صور من جهازك مع نص توضيحي لكل صورة</small>
         </div>
         <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="lesson-error">
@@ -989,7 +989,7 @@ window.showCreateLessonForm = function() {
         </div>
         <div class="btn-group">
           <button type="submit" class="btn btn-success">حفظ الدرس</button>
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
+          <button type="button" class="btn btn-secondary" data-action="modal-close">إلغاء</button>
         </div>
       </form>
     </div>
@@ -1099,7 +1099,7 @@ window.addVideoField = function() {
   videoField.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
       <label style="font-weight: 600;">الفيديو ${index + 1}</label>
-      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-video-index]').remove()">حذف</button>
+      <button type="button" class="btn btn-danger btn-xs" data-action="remove-video-block">حذف</button>
     </div>
     <input type="url" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
     <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
@@ -1126,12 +1126,12 @@ window.addImageField = function(imagePath = '', position = 'bottom', size = 'med
   imageField.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
       <label style="font-weight: 600;">الصورة ${index + 1}</label>
-      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-image-index]').remove()">حذف</button>
+      <button type="button" class="btn btn-danger btn-xs" data-action="remove-image-block">حذف</button>
     </div>
     ${imagePath ? `<div style="background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e2e8f0;">
       <img src="${imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
     </div>` : ''}
-    <input type="file" accept="image/*" onchange="uploadImage(this, event)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+    <input type="file" accept="image/*" class="lesson-image-upload" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
     <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
       <select name="image-position" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
         <option value="bottom" ${position === 'bottom' ? 'selected' : ''}>أسفل الصورة</option>
@@ -1207,7 +1207,7 @@ window.editLesson = async function(id) {
       <div class="modal-content">
         <div class="modal-header">
           <h2>تعديل الدرس</h2>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+          <button type="button" class="modal-close" data-action="modal-close">×</button>
         </div>
         <form id="edit-lesson-form">
           <div class="form-group">
@@ -1224,13 +1224,13 @@ window.editLesson = async function(id) {
           <div class="form-group">
             <label><i class="fab fa-youtube"></i> الفيديوهات (اختياري)</label>
             <div id="edit-videos-container"></div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="addEditVideoField()">+ إضافة فيديو</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="add-edit-video-field">+ إضافة فيديو</button>
             <small style="color: #64748b; display: block; margin-top: 0.5rem;">أضف فيديو واحد أو أكثر مع شرح منفصل لكل واحد</small>
           </div>
           <div class="form-group">
             <label><i class="fas fa-image"></i> الصور (اختياري)</label>
             <div id="edit-images-container"></div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="addEditImageField()">+ إضافة صورة</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="add-edit-image-field">+ إضافة صورة</button>
             <small style="color: #64748b; display: block; margin-top: 0.5rem;">رفع صور من جهازك مع نص توضيحي لكل صورة</small>
           </div>
           <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="edit-lesson-error">
@@ -1238,7 +1238,7 @@ window.editLesson = async function(id) {
           </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
-            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
+            <button type="button" class="btn btn-secondary" data-action="modal-close">إلغاء</button>
           </div>
         </form>
       </div>
@@ -1420,7 +1420,7 @@ window.addEditVideoField = function(url = '', position = 'bottom', size = 'mediu
   videoField.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
       <label style="font-weight: 600;">الفيديو ${index + 1}</label>
-      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-video-index]').remove()">حذف</button>
+      <button type="button" class="btn btn-danger btn-xs" data-action="remove-video-block">حذف</button>
     </div>
     <input type="url" value="${escapeHtml(url)}" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
     <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
@@ -1447,12 +1447,12 @@ window.addEditImageField = function(imagePath = '', position = 'bottom', size = 
   imageField.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
       <label style="font-weight: 600;">الصورة ${index + 1}</label>
-      <button type="button" class="btn btn-danger btn-xs" onclick="this.closest('[data-image-index]').remove()">حذف</button>
+      <button type="button" class="btn btn-danger btn-xs" data-action="remove-image-block">حذف</button>
     </div>
     ${imagePath ? `<div style="background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e2e8f0;">
       <img src="${imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">
     </div>` : ''}
-    <input type="file" accept="image/*" onchange="uploadEditImage(this, event)" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+    <input type="file" accept="image/*" class="lesson-edit-image-upload" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
     <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
       <select name="image-position" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
         <option value="bottom" ${position === 'bottom' ? 'selected' : ''}>أسفل الصورة</option>
@@ -1514,9 +1514,9 @@ window.manageQuestions = async function(lessonId, lessonTitle) {
       <div class="modal-content" style="max-width: 900px;">
         <div class="modal-header">
           <h2><i class="fas fa-question-circle"></i> إدارة أسئلة: ${escapeHtml(lessonTitle)}</h2>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-        </div>
-        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+<button type="button" class="modal-close" data-action="modal-close">×</button>
+          </div>
+          <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
           <div class="questions-list-admin" id="questions-list-admin">
             ${questions.length === 0 
               ? '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>'
@@ -1558,14 +1558,14 @@ window.manageQuestions = async function(lessonId, lessonTitle) {
                   <option value="D">د</option>
                 </select>
               </div>
-              <button class="btn btn-primary" onclick="addQuestion(${lessonId})">
+              <button type="button" class="btn btn-primary" data-action="add-question" data-lesson-id="${lessonId}">
                 <i class="fas fa-plus"></i> إضافة السؤال
               </button>
             </div>
           </div>
         </div>
         <div class="modal-footer" style="padding: 1rem; border-top: 1px solid #e2e8f0; text-align: left;">
-          <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">إغلاق</button>
+          <button type="button" class="btn btn-secondary" data-action="close-questions-modal">إغلاق</button>
         </div>
       </div>
     `;
@@ -1582,8 +1582,8 @@ function renderQuestionAdmin(q, idx, lessonId) {
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
         <span style="background: linear-gradient(135deg, #1e3a8a, #0891b2); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">السؤال ${idx + 1}</span>
         <div>
-          <button class="btn btn-sm btn-primary" onclick="editQuestion(${q.id}, ${lessonId})"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-sm btn-danger" onclick="deleteQuestion(${q.id}, ${lessonId})"><i class="fas fa-trash"></i></button>
+          <button type="button" class="btn btn-sm btn-primary" data-action="edit-question" data-question-id="${q.id}" data-lesson-id="${lessonId}"><i class="fas fa-edit"></i></button>
+          <button type="button" class="btn btn-sm btn-danger" data-action="delete-question" data-question-id="${q.id}" data-lesson-id="${lessonId}"><i class="fas fa-trash"></i></button>
         </div>
       </div>
       <p style="font-weight: 600; margin-bottom: 0.75rem;">${escapeHtml(q.question_text)}</p>
@@ -1655,7 +1655,7 @@ window.editQuestion = async function(questionId, lessonId) {
       <div class="modal-content" style="max-width: 700px;">
         <div class="modal-header">
           <h2><i class="fas fa-edit"></i> تعديل السؤال</h2>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+          <button type="button" class="modal-close" data-action="modal-close">×</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -1691,10 +1691,10 @@ window.editQuestion = async function(questionId, lessonId) {
           </div>
         </div>
         <div class="modal-footer" style="padding: 1rem; border-top: 1px solid #e2e8f0;">
-          <button class="btn btn-primary" onclick="saveQuestionEdit(${questionId}, ${lessonId})">
+          <button type="button" class="btn btn-primary" data-action="save-question-edit" data-question-id="${questionId}" data-lesson-id="${lessonId}">
             <i class="fas fa-save"></i> حفظ التغييرات
           </button>
-          <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
+          <button type="button" class="btn btn-secondary" data-action="modal-close">إلغاء</button>
         </div>
       </div>
     `;
@@ -1772,4 +1772,141 @@ window.deleteQuestion = async function(questionId, lessonId) {
     showAlert('خطأ في حذف السؤال: ' + error.message, 'error');
   }
 };
+
+// SPA navigation for admin links (no inline handlers)
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (a && a.href.startsWith(window.location.origin) && document.getElementById('admin-app')?.contains(a)) {
+    e.preventDefault();
+    router.navigate(a.getAttribute('href'));
+  }
+});
+
+// Delegated click handler (CSP-friendly: no inline handlers)
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.getAttribute('data-action');
+
+  if (action === 'modal-close') {
+    el.closest('.modal')?.remove();
+    return;
+  }
+  if (action === 'confirm-yes' || action === 'confirm-no') {
+    const modal = el.closest('.modal');
+    if (modal) {
+      modal.remove();
+      window.confirmResult = (action === 'confirm-yes');
+      window.dispatchEvent(new Event('confirmResolved'));
+    }
+    return;
+  }
+  if (action === 'toggle-sidebar') {
+    toggleSidebar();
+    return;
+  }
+  if (action === 'navigate') {
+    const path = el.getAttribute('data-path');
+    if (path) { e.preventDefault(); router.navigate(path); }
+    return;
+  }
+  if (action === 'logout') {
+    e.preventDefault();
+    logout();
+    return;
+  }
+  if (action === 'show-create-class') { showCreateClassForm(); return; }
+  if (action === 'show-create-unit') { showCreateUnitForm(); return; }
+  if (action === 'show-create-lesson') { showCreateLessonForm(); return; }
+  if (action === 'edit-class') {
+    const id = el.getAttribute('data-id');
+    const name = el.getAttribute('data-name') || '';
+    if (id) editClass(parseInt(id, 10), name);
+    return;
+  }
+  if (action === 'delete-class') {
+    const id = el.getAttribute('data-id');
+    const name = el.getAttribute('data-name') || '';
+    if (id) deleteClass(parseInt(id, 10), name);
+    return;
+  }
+  if (action === 'edit-unit') {
+    const id = el.getAttribute('data-id');
+    const title = el.getAttribute('data-title') || '';
+    const classId = el.getAttribute('data-class-id');
+    if (id && classId) editUnit(parseInt(id, 10), title, parseInt(classId, 10));
+    return;
+  }
+  if (action === 'delete-unit') {
+    const id = el.getAttribute('data-id');
+    const title = el.getAttribute('data-title') || '';
+    if (id) deleteUnit(parseInt(id, 10), title);
+    return;
+  }
+  if (action === 'edit-lesson') {
+    const id = el.getAttribute('data-id');
+    if (id) editLesson(parseInt(id, 10));
+    return;
+  }
+  if (action === 'manage-questions') {
+    const id = el.getAttribute('data-id');
+    const title = el.getAttribute('data-title') || '';
+    if (id) manageQuestions(parseInt(id, 10), title);
+    return;
+  }
+  if (action === 'delete-lesson') {
+    const id = el.getAttribute('data-id');
+    const title = el.getAttribute('data-title') || '';
+    if (id) deleteLesson(parseInt(id, 10), title);
+    return;
+  }
+  if (action === 'add-video-field') { addVideoField(); return; }
+  if (action === 'add-image-field') { addImageField(); return; }
+  if (action === 'add-edit-video-field') { addEditVideoField(); return; }
+  if (action === 'add-edit-image-field') { addEditImageField(); return; }
+  if (action === 'remove-video-block') {
+    el.closest('[data-video-index]')?.remove();
+    return;
+  }
+  if (action === 'remove-image-block') {
+    el.closest('[data-image-index]')?.remove();
+    return;
+  }
+  if (action === 'add-question') {
+    const lessonId = el.getAttribute('data-lesson-id');
+    if (lessonId) addQuestion(parseInt(lessonId, 10));
+    return;
+  }
+  if (action === 'close-questions-modal') {
+    el.closest('.modal')?.remove();
+    return;
+  }
+  if (action === 'edit-question') {
+    const qId = el.getAttribute('data-question-id');
+    const lessonId = el.getAttribute('data-lesson-id');
+    if (qId && lessonId) editQuestion(parseInt(qId, 10), parseInt(lessonId, 10));
+    return;
+  }
+  if (action === 'delete-question') {
+    const qId = el.getAttribute('data-question-id');
+    const lessonId = el.getAttribute('data-lesson-id');
+    if (qId && lessonId) deleteQuestion(parseInt(qId, 10), parseInt(lessonId, 10));
+    return;
+  }
+  if (action === 'save-question-edit') {
+    const questionId = el.getAttribute('data-question-id');
+    const lessonId = el.getAttribute('data-lesson-id');
+    if (questionId && lessonId) saveQuestionEdit(parseInt(questionId, 10), parseInt(lessonId, 10));
+    return;
+  }
+});
+
+// Delegated change handler for image uploads (CSP-friendly)
+document.addEventListener('change', (e) => {
+  if (e.target.classList.contains('lesson-image-upload')) {
+    uploadImage(e.target, e);
+  } else if (e.target.classList.contains('lesson-edit-image-upload')) {
+    uploadEditImage(e.target, e);
+  }
+});
 

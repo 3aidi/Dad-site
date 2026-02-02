@@ -1126,7 +1126,18 @@ window.uploadImage = async function(input, event) {
 
 window.editLesson = async function(id) {
   try {
+    console.log('editLesson called with id:', id);
     const lesson = await adminApi.get(`/api/lessons/${id}`);
+    console.log('Lesson loaded:', lesson);
+    
+    // Make sure availableUnits is loaded, if not fetch it
+    if (!window.availableUnits) {
+      console.log('availableUnits not found, fetching units...');
+      window.availableUnits = await adminApi.get('/api/units');
+    }
+    
+    console.log('availableUnits:', window.availableUnits);
+    
     const unitOptions = window.availableUnits.map(unit => 
       `<option value="${unit.id}" ${unit.id === lesson.unit_id ? 'selected' : ''}>${escapeHtml(unit.title || unit.title_ar)} (${escapeHtml(unit.class_name)})</option>`
     ).join('');
@@ -1278,7 +1289,8 @@ window.editLesson = async function(id) {
       }
     });
   } catch (error) {
-    showAlert(error.message, 'error');
+    console.error('editLesson error:', error);
+    showAlert('خطأ في تحميل الدرس: ' + error.message, 'error');
   }
 };
 

@@ -162,27 +162,30 @@ app.use(helmet({
 }));
 
 // Rate Limiting - Prevent brute force attacks
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
-  message: { error: 'عدد كبير من الطلبات. يرجى المحاولة لاحقاً' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Only enabled in production - disabled in development for testing
+if (isProd) {
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: { error: 'عدد كبير من الطلبات. يرجى المحاولة لاحقاً' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
-// Strict rate limiting for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 login attempts per 15 minutes
-  message: { error: 'عدد كبير من محاولات تسجيل الدخول. يرجى المحاولة بعد 15 دقيقة' },
-  skipSuccessfulRequests: true,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+  // Strict rate limiting for authentication endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 login attempts per 15 minutes
+    message: { error: 'عدد كبير من محاولات تسجيل الدخول. يرجى المحاولة بعد 15 دقيقة' },
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
-// Apply rate limiting to API routes
-app.use('/api/', apiLimiter);
-app.use('/api/auth/login', authLimiter);
+  // Apply rate limiting to API routes
+  app.use('/api/', apiLimiter);
+  app.use('/api/auth/login', authLimiter);
+}
 
 // Middleware
 app.use(compression());

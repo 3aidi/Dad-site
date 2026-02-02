@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 
 const authRoutes = require('./src/routes/authRoutes');
@@ -24,18 +25,17 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Middleware
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
 // Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+const isProd = process.env.NODE_ENV === 'production';
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  maxAge: isProd ? '7d' : 0
+}));
 
 // API Routes
 app.use('/api/auth', authRoutes);

@@ -597,8 +597,8 @@ router.on('/admin/units', async () => {
             <td>${escapeHtml(unit.class_name)}</td>
             <td>${new Date(unit.created_at).toLocaleDateString('ar-EG')}</td>
             <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}', ${unit.class_id})">تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}')">حذف</button>
+              <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}', ${unit.class_id})"><i class="fas fa-edit"></i> تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml((unit.title || unit.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
           </tr>
         `).join('');
@@ -846,8 +846,8 @@ router.on('/admin/lessons', async () => {
             <td>${escapeHtml(lesson.class_name)}</td>
             <td>${new Date(lesson.created_at).toLocaleDateString()}</td>
             <td class="table-actions">
-              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})">تعديل</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')">حذف</button>
+              <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})"><i class="fas fa-edit"></i> تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
           </tr>
         `).join('');
@@ -1126,17 +1126,12 @@ window.uploadImage = async function(input, event) {
 
 window.editLesson = async function(id) {
   try {
-    console.log('editLesson called with id:', id);
     const lesson = await adminApi.get(`/api/lessons/${id}`);
-    console.log('Lesson loaded:', lesson);
     
     // Make sure availableUnits is loaded, if not fetch it
     if (!window.availableUnits) {
-      console.log('availableUnits not found, fetching units...');
       window.availableUnits = await adminApi.get('/api/units');
     }
-    
-    console.log('availableUnits:', window.availableUnits);
     
     const unitOptions = window.availableUnits.map(unit => 
       `<option value="${unit.id}" ${unit.id === lesson.unit_id ? 'selected' : ''}>${escapeHtml(unit.title || unit.title_ar)} (${escapeHtml(unit.class_name)})</option>`

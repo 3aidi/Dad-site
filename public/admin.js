@@ -82,11 +82,13 @@ const adminApi = {
       if (!response.ok) {
         const errorData = await safeParseJson(response);
         const error = new Error(errorData?.error || errorData?.message || 'فشل تحميل البيانات');
-        error.apiError = errorData;
+        error.apiError = errorData;  // Preserve full error data
+        console.error('API GET Error:', url, errorData);
         throw error;
       }
       return safeParseJson(response);
     } catch (error) {
+      console.error('API GET Exception:', url, error);
       throw error;
     }
   },
@@ -127,6 +129,12 @@ const adminApi = {
       }
       if (!response.ok) {
         const errorData = await safeParseJson(response);
+        console.error('PUT Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          errorData: errorData
+        });
         const error = new Error(errorData.error || `فشل التحديث (${response.status})`);
         error.apiError = errorData;
         error.status = response.status;
@@ -158,6 +166,9 @@ const adminApi = {
 // Initialize
 const router = new AdminRouter();
 const app = document.getElementById('admin-app');
+
+console.log('Admin app element:', app);
+console.log('Router initialized:', router);
 
 // Utility Functions
 function escapeHtml(text) {
@@ -257,12 +268,19 @@ async function logout() {
   try {
     await adminApi.post('/api/auth/logout', {});
     router.navigate('/admin/login');
-  } catch (e) {}
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
 }
 
 // Login Page
 router.on('/admin/login', async () => {
-  if (!app) return;
+  console.log('Login route triggered, app element:', app);
+  
+  if (!app) {
+    console.error('Admin app element not found!');
+    return;
+  }
   
   app.innerHTML = `
     <div class="login-container">
@@ -1115,6 +1133,7 @@ window.uploadImage = async function(input, event) {
     
     showAlert('تم رفع الصورة بنجاح!');
   } catch (error) {
+    console.error('Image upload error:', error);
     showAlert('خطأ في رفع الصورة: ' + error.message, 'error');
   }
 };
@@ -1275,6 +1294,12 @@ window.editLesson = async function(id) {
         router.navigate('/admin/lessons');
         showAlert('تم تحديث الدرس بنجاح!');
       } catch (error) {
+        console.error('Save lesson error:', {
+          message: error.message,
+          apiError: error.apiError,
+          status: error.status,
+          fullError: error
+        });
         errorDiv.style.display = 'block';
         let errorText = error.message;
         if (error.apiError?.details) {
@@ -1295,6 +1320,7 @@ window.editLesson = async function(id) {
       }
     });
   } catch (error) {
+    console.error('editLesson error:', error);
     showAlert('خطأ في تحميل الدرس: ' + error.message, 'error');
   }
 };
@@ -1321,10 +1347,15 @@ window.addEventListener('popstate', () => {
   router.handleRoute();
 });
 
-// Initial route
+// Initial route - wait for DOM to be ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => router.handleRoute());
+  console.log('Waiting for DOM...');
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM ready, handling route...');
+    router.handleRoute();
+  });
 } else {
+  console.log('DOM already ready, handling route...');
   router.handleRoute();
 }
 

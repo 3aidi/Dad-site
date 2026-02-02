@@ -31,25 +31,42 @@
     </div>
   </header>
 
-  <nav>
-    <div class="nav-content">
-      <a href="/" id="nav-home">
-        <i class="fas fa-home"></i>
-        <span>الرئيسية</span>
-      </a>
-      <a href="/classes" id="nav-classes">
-        <i class="fas fa-book-open"></i>
-        <span>الصفوف الدراسية</span>
-      </a>
-    </div>
-  </nav>
-
-  <main id="app">
+  <div class="viewer-layout">
+    <button type="button" class="viewer-hamburger" id="viewerHamburger" aria-label="القائمة">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="viewer-sidebar-overlay" id="viewerSidebarOverlay" aria-hidden="true"></div>
+    <aside class="viewer-sidebar" id="viewerSidebar">
+      <div class="viewer-sidebar-header">
+        <div class="viewer-sidebar-logo">
+          <i class="fas fa-globe-asia"></i>
+        </div>
+        <h2>المنصة التعليمية</h2>
+        <p>الأستاذ سعد العايدي</p>
+      </div>
+      <nav class="viewer-sidebar-nav">
+        <a href="/" id="nav-home">
+          <i class="fas fa-home"></i>
+          <span>الرئيسية</span>
+        </a>
+        <a href="/classes" id="nav-classes">
+          <i class="fas fa-book-open"></i>
+          <span>الصفوف الدراسية</span>
+        </a>
+      </nav>
+      <div class="viewer-sidebar-footer">
+        <p>مدرسة أبو فراس الحمداني</p>
+      </div>
+    </aside>
+    <main id="app">
     <div class="loading">
       <i class="fas fa-spinner fa-spin"></i>
       <span>جارٍ التحميل...</span>
     </div>
-  </main>
+    </main>
+  </div>
 
   <footer>
     <div class="footer-content">

@@ -1,3 +1,11 @@
+// If user landed on /admin or /admin/ while public app loaded, send to admin login
+(function () {
+  var path = window.location.pathname.replace(/\/$/, '') || '/';
+  if (path === '/admin') {
+    window.location.replace('/admin/login');
+  }
+})();
+
 // Router
 class Router {
   constructor() {
@@ -795,3 +803,19 @@ app.addEventListener('keydown', (e) => {
 
 // Initial route
 router.handleRoute();
+
+// Viewer sidebar toggle (mobile)
+(function () {
+  const hamburger = document.getElementById('viewerHamburger');
+  const overlay = document.getElementById('viewerSidebarOverlay');
+  const sidebar = document.getElementById('viewerSidebar');
+  if (!hamburger || !overlay || !sidebar) return;
+  function toggle() {
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+    hamburger.classList.toggle('active');
+    overlay.setAttribute('aria-hidden', sidebar.classList.contains('active') ? 'false' : 'true');
+  }
+  hamburger.addEventListener('click', toggle);
+  overlay.addEventListener('click', toggle);
+})();

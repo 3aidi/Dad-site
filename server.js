@@ -230,6 +230,14 @@ app.use('/api', (req, res, next) => {
   res.status(404).json({ error: 'Resource not found' });
 });
 
+// Redirect /admin and /admin/ to admin login page
+app.get('/admin', (req, res) => {
+  res.redirect(302, '/admin/login');
+});
+app.get('/admin/', (req, res) => {
+  res.redirect(302, '/admin/login');
+});
+
 // Serve admin pages (protected on API level)
 app.get('/admin/*', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

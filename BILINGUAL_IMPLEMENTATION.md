@@ -145,7 +145,7 @@ Implemented comprehensive bilingual (Arabic/English) name inputs for classes, un
 
 #### Arabic Messages (العربية)
 
-```
+```txt
 اسم الصف بالعربية مطلوب
 اسم الصف بالإنجليزية مطلوب
 اسم الصف بالعربية يحتوي على أحرف غير مسموحة

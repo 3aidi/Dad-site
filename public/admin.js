@@ -165,6 +165,7 @@ const adminApi = {
 
 // Initialize
 const router = new AdminRouter();
+// Block all button clicks globally
 const app = document.getElementById('admin-app');
 
 console.log('Admin app element:', app);

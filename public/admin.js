@@ -199,22 +199,37 @@ function showConfirmModal(title, message) {
       <div class="modal-content" style="max-width: 400px;">
         <div class="modal-header">
           <h2>${escapeHtml(title)}</h2>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+          <button class="modal-close">&times;</button>
         </div>
         <div style="padding: 1.5rem; color: #334155; line-height: 1.6;">
           ${message}
         </div>
         <div class="btn-group">
-          <button class="btn btn-danger" onclick="this.closest('.modal').remove(); window.confirmResult = true; window.dispatchEvent(new Event('confirmResolved'));">
+          <button class="btn btn-danger" data-modal-action="confirm-delete">
             <i class="fas fa-trash"></i> نعم، احذفه
           </button>
-          <button class="btn btn-secondary" onclick="this.closest('.modal').remove(); window.confirmResult = false; window.dispatchEvent(new Event('confirmResolved'));">
+          <button class="btn btn-secondary" data-modal-action="cancel">
             <i class="fas fa-times"></i> إلغاء
           </button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
+
+        // Modal button event listeners (CSP safe)
+        modal.querySelector('.modal-close').addEventListener('click', function() {
+          modal.remove();
+        });
+        modal.querySelector('[data-modal-action="confirm-delete"]').addEventListener('click', function() {
+          modal.remove();
+          window.confirmResult = true;
+          window.dispatchEvent(new Event('confirmResolved'));
+        });
+        modal.querySelector('[data-modal-action="cancel"]').addEventListener('click', function() {
+          modal.remove();
+          window.confirmResult = false;
+          window.dispatchEvent(new Event('confirmResolved'));
+        });
     
     window.addEventListener('confirmResolved', function handler() {
       window.removeEventListener('confirmResolved', handler);
@@ -227,12 +242,12 @@ function showConfirmModal(title, message) {
 function adminLayout(content, activeNav) {
   return `
     <div class="admin-layout">
-      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()">
+      <button class="hamburger" id="hamburgerBtn">
         <span></span>
         <span></span>
         <span></span>
       </button>
-      <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
       <aside class="sidebar" id="adminSidebar">
         <div class="sidebar-header">
           <div class="logo">
@@ -243,16 +258,16 @@ function adminLayout(content, activeNav) {
           <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.25rem;">مدرسة أبو فراس الحمداني للتعليم الأساسي</p>
         </div>
         <nav>
-          <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/dashboard')">
+          <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}" id="navDashboard">
             <i class="fas fa-chart-line"></i> لوحة المعلومات
           </a>
-          <a href="/admin/classes" class="${activeNav === 'classes' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/classes')">
+          <a href="/admin/classes" class="${activeNav === 'classes' ? 'active' : ''}" id="navClasses">
             <i class="fas fa-book-open"></i> الصفوف الدراسية
           </a>
-          <a href="/admin/units" class="${activeNav === 'units' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/units')">
+          <a href="/admin/units" class="${activeNav === 'units' ? 'active' : ''}" id="navUnits">
             <i class="fas fa-folder-open"></i> الوحدات الدراسية
           </a>
-          <a href="/admin/lessons" class="${activeNav === 'lessons' ? 'active' : ''}" onclick="event.preventDefault(); router.navigate('/admin/lessons')">
+          <a href="/admin/lessons" class="${activeNav === 'lessons' ? 'active' : ''}" id="navLessons">
             <i class="fas fa-file-alt"></i> الدروس
           </a>
         </nav>
@@ -262,7 +277,7 @@ function adminLayout(content, activeNav) {
             <span>${router.currentUser?.username || 'مدير'}</span>
             <i class="fas fa-user-tie"></i>
           </div>
-          <button class="logout-badge" onclick="logout()">تسجيل الخروج <i class="fas fa-sign-out-alt"></i></button>
+          <button class="logout-badge" id="logoutBtn">تسجيل الخروج <i class="fas fa-sign-out-alt"></i></button>
         </div>
       </aside>
       <main class="admin-main">
@@ -270,6 +285,24 @@ function adminLayout(content, activeNav) {
       </main>
     </div>
   `;
+}
+
+// Attach sidebar and nav event listeners after DOM update
+function attachAdminNavEvents() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.onclick = logout;
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  if (hamburgerBtn) hamburgerBtn.onclick = toggleSidebar;
+  if (sidebarOverlay) sidebarOverlay.onclick = toggleSidebar;
+  const navDashboard = document.getElementById('navDashboard');
+  if (navDashboard) navDashboard.onclick = function(e) { e.preventDefault(); router.navigate('/admin/dashboard'); };
+  const navClasses = document.getElementById('navClasses');
+  if (navClasses) navClasses.onclick = function(e) { e.preventDefault(); router.navigate('/admin/classes'); };
+  const navUnits = document.getElementById('navUnits');
+  if (navUnits) navUnits.onclick = function(e) { e.preventDefault(); router.navigate('/admin/units'); };
+  const navLessons = document.getElementById('navLessons');
+  if (navLessons) navLessons.onclick = function(e) { e.preventDefault(); router.navigate('/admin/lessons'); };
 }
 
 async function logout() {
@@ -408,7 +441,7 @@ router.on('/admin/classes', async () => {
     const classesHTML = classes.length === 0 
       ? '<div class="empty-state" style="padding: 3rem; text-align: center;"><div class="empty-state-icon"><i class="fas fa-book"></i></div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></div>'
       : classes.map((cls, index) => `
-          <div class="admin-class-card">
+          <div class="admin-class-card" data-class-id="${cls.id}" data-class-name="${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}">
             <div class="admin-class-card-header">
               <div class="admin-class-card-info">
                 <h3 class="admin-class-card-title">${escapeHtml(cls.name || cls.name_ar)}</h3>
@@ -419,20 +452,27 @@ router.on('/admin/classes', async () => {
               </div>
             </div>
             <div class="admin-class-card-actions">
-              <button class="btn btn-primary" onclick="editClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}');" title="تعديل الصف">
+              <button class="btn btn-primary edit-class-btn" title="تعديل الصف">
                 <i class="fas fa-edit"></i> تعديل
               </button>
-              <button class="btn btn-danger" onclick="deleteClass(${cls.id}, '${escapeHtml((cls.name || cls.name_ar)).replace(/'/g, "\\'")}');" title="حذف الصف">
+              <button class="btn btn-danger delete-class-btn" title="حذف الصف">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
           </div>
+            // Attach event listeners for CRUD actions
+            document.querySelectorAll('.admin-class-card').forEach(card => {
+              const classId = card.getAttribute('data-class-id');
+              const className = card.getAttribute('data-class-name');
+              card.querySelector('.edit-class-btn').onclick = () => editClass(classId, className);
+              card.querySelector('.delete-class-btn').onclick = () => deleteClass(classId, className);
+            });
         `).join('');
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
         <h1>إدارة الصفوف الدراسية</h1>
-        <button class="btn btn-primary" onclick="showCreateClassForm()"><i class="fas fa-plus"></i> صف جديد</button>
+        <button class="btn btn-primary" id="createClassBtn"><i class="fas fa-plus"></i> صف جديد</button>
       </div>
       <div class="admin-content">
         <div class="admin-classes-grid">
@@ -440,6 +480,9 @@ router.on('/admin/classes', async () => {
         </div>
       </div>
     `, 'classes');
+    attachAdminNavEvents();
+    const createClassBtn = document.getElementById('createClassBtn');
+    if (createClassBtn) createClassBtn.onclick = showCreateClassForm;
   } catch (error) {
     app.innerHTML = adminLayout(`<div class="alert alert-error">Error loading classes</div>`, 'classes');
   }

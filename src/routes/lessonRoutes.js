@@ -213,6 +213,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { title, unit_id, content, videos, images } = req.body;
     const { id } = req.params;
 
+    console.log('[PUT /api/lessons/:id] Payload:', {
+      id,
+      title,
+      unit_id,
+      videosCount: Array.isArray(videos) ? videos.length : 0,
+      imagesCount: Array.isArray(images) ? images.length : 0
+    });
+
     // Validation: Check if title is empty
     if (!title || title.trim() === '') {
       return res.status(400).json({ 
@@ -261,10 +269,20 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    const result = await db.run(
-      'UPDATE lessons SET title = ?, unit_id = ?, content = ? WHERE id = ?',
-      [trimmedTitle, unit_id, content || '', id]
-    );
+    let result;
+    try {
+      result = await db.run(
+        'UPDATE lessons SET title = ?, unit_id = ?, content = ? WHERE id = ?',
+        [trimmedTitle, unit_id, content || '', id]
+      );
+    } catch (updateError) {
+      console.error('[PUT /api/lessons/:id] Update error:', updateError);
+      return res.status(500).json({
+        error: 'حدث خطأ في الخادم',
+        stage: 'update_lesson',
+        details: updateError.message
+      });
+    }
 
     if (result.changes === 0) {
       return res.status(404).json({ error: 'الدرس غير موجود' });
@@ -272,29 +290,47 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     // Handle videos: delete old ones and insert new ones
     if (videos && Array.isArray(videos)) {
-      await db.run('DELETE FROM videos WHERE lesson_id = ?', [id]);
-      for (let i = 0; i < videos.length; i++) {
-        const v = videos[i];
-        if (v.video_url) {
-          await db.run(
-            'INSERT INTO videos (lesson_id, video_url, position, size, explanation, display_order) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, v.video_url, v.video_position || 'bottom', v.video_size || 'large', v.video_explanation || null, i]
-          );
+      try {
+        await db.run('DELETE FROM videos WHERE lesson_id = ?', [id]);
+        for (let i = 0; i < videos.length; i++) {
+          const v = videos[i];
+          if (v.video_url) {
+            await db.run(
+              'INSERT INTO videos (lesson_id, video_url, position, size, explanation, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+              [id, v.video_url, v.video_position || 'bottom', v.video_size || 'large', v.video_explanation || null, i]
+            );
+          }
         }
+      } catch (videoError) {
+        console.error('[PUT /api/lessons/:id] Videos error:', videoError);
+        return res.status(500).json({
+          error: 'حدث خطأ في الخادم',
+          stage: 'save_videos',
+          details: videoError.message
+        });
       }
     }
 
     // Handle images: delete old ones and insert new ones
     if (images && Array.isArray(images)) {
-      await db.run('DELETE FROM images WHERE lesson_id = ?', [id]);
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i];
-        if (img.image_path) {
-          await db.run(
-            'INSERT INTO images (lesson_id, image_path, position, size, caption, display_order) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, img.image_path, img.image_position || 'bottom', img.image_size || 'medium', img.image_caption || null, i]
-          );
+      try {
+        await db.run('DELETE FROM images WHERE lesson_id = ?', [id]);
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          if (img.image_path) {
+            await db.run(
+              'INSERT INTO images (lesson_id, image_path, position, size, caption, display_order) VALUES (?, ?, ?, ?, ?, ?)',
+              [id, img.image_path, img.image_position || 'bottom', img.image_size || 'medium', img.image_caption || null, i]
+            );
+          }
         }
+      } catch (imageError) {
+        console.error('[PUT /api/lessons/:id] Images error:', imageError);
+        return res.status(500).json({
+          error: 'حدث خطأ في الخادم',
+          stage: 'save_images',
+          details: imageError.message
+        });
       }
     }
 
@@ -310,7 +346,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
     res.json({ ...updatedLesson, videos: lessonsVideos, images: lessonsImages });
   } catch (error) {
     console.error('Error updating lesson:', error);
-    res.status(500).json({ error: 'حدث خطأ في الخادم' });
+    res.status(500).json({
+      error: 'حدث خطأ في الخادم',
+      stage: 'unknown',
+      details: error.message
+    });
   }
 });
 

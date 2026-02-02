@@ -408,13 +408,58 @@ router.on('/lesson/:id', async (lessonId) => {
       ? lesson.content.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('') 
       : '';
     
-    const lessonHTML = `${videosSections}${imagesSections}${content ? `<div class="lesson-content">${content}</div>` : ''}`;
+    const explanationHTML = `${videosSections}${imagesSections}${content ? `<div class="lesson-content">${content}</div>` : ''}`;
 
     app.innerHTML = `
       ${breadcrumbs}
       <h1 class="page-title">${escapeHtml(lesson.title)}</h1>
-      ${lessonHTML}
+      
+      <div class="lesson-tabs">
+        <button class="lesson-tab active" data-tab="explanation">
+          <i class="fas fa-book-reader"></i> الشرح
+        </button>
+        <button class="lesson-tab" data-tab="questions">
+          <i class="fas fa-question-circle"></i> بنك الأسئلة
+        </button>
+      </div>
+      
+      <div class="tab-content" id="explanation-tab">
+        ${explanationHTML || '<p class="no-content">لا يوجد محتوى شرح لهذا الدرس بعد</p>'}
+      </div>
+      
+      <div class="tab-content hidden" id="questions-tab">
+        <div class="questions-loading"><i class="fas fa-spinner fa-spin"></i> جارٍ تحميل الأسئلة...</div>
+      </div>
     `;
+    
+    // Tab switching
+    const tabs = document.querySelectorAll('.lesson-tab');
+    const explanationTab = document.getElementById('explanation-tab');
+    const questionsTab = document.getElementById('questions-tab');
+    let questionsLoaded = false;
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', async () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const tabName = tab.getAttribute('data-tab');
+        if (tabName === 'explanation') {
+          explanationTab.classList.remove('hidden');
+          questionsTab.classList.add('hidden');
+        } else {
+          explanationTab.classList.add('hidden');
+          questionsTab.classList.remove('hidden');
+          
+          // Load questions if not loaded
+          if (!questionsLoaded) {
+            await loadQuestions(lessonId, questionsTab);
+            questionsLoaded = true;
+          }
+        }
+      });
+    });
+    
   } catch (error) {
     app.innerHTML = `
       <div class="error">
@@ -425,6 +470,174 @@ router.on('/lesson/:id', async (lessonId) => {
     `;
   }
 });
+
+// Load and display questions for quiz
+async function loadQuestions(lessonId, container) {
+  try {
+    const questions = await api.get(`/api/lessons/${lessonId}/questions`);
+    
+    if (!questions || questions.length === 0) {
+      container.innerHTML = `
+        <div class="no-questions">
+          <i class="fas fa-clipboard-list"></i>
+          <p>لا توجد أسئلة لهذا الدرس بعد</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = `
+      <div class="quiz-container">
+        <div class="quiz-header">
+          <h3><i class="fas fa-clipboard-check"></i> اختبر نفسك</h3>
+          <p>عدد الأسئلة: ${questions.length}</p>
+          <div class="quiz-score" id="quiz-score"></div>
+        </div>
+        <div class="questions-list" id="questions-list">
+          ${questions.map((q, index) => `
+            <div class="question-card" id="question-${q.id}">
+              <div class="question-number">السؤال ${index + 1}</div>
+              <div class="question-text">${escapeHtml(q.question_text)}</div>
+              <div class="options-list">
+                <label class="option-item" data-option="A">
+                  <input type="radio" name="q${q.id}" value="A">
+                  <span class="option-letter">أ</span>
+                  <span class="option-text">${escapeHtml(q.option_a)}</span>
+                </label>
+                <label class="option-item" data-option="B">
+                  <input type="radio" name="q${q.id}" value="B">
+                  <span class="option-letter">ب</span>
+                  <span class="option-text">${escapeHtml(q.option_b)}</span>
+                </label>
+                <label class="option-item" data-option="C">
+                  <input type="radio" name="q${q.id}" value="C">
+                  <span class="option-letter">ج</span>
+                  <span class="option-text">${escapeHtml(q.option_c)}</span>
+                </label>
+                <label class="option-item" data-option="D">
+                  <input type="radio" name="q${q.id}" value="D">
+                  <span class="option-letter">د</span>
+                  <span class="option-text">${escapeHtml(q.option_d)}</span>
+                </label>
+              </div>
+              <button class="btn btn-check-answer" onclick="checkAnswer(${q.id}, ${lessonId})">
+                <i class="fas fa-check"></i> تحقق من الإجابة
+              </button>
+              <div class="answer-feedback" id="feedback-${q.id}"></div>
+            </div>
+          `).join('')}
+        </div>
+        <button class="btn btn-submit-quiz" onclick="submitQuiz(${lessonId}, ${JSON.stringify(questions.map(q => q.id)).replace(/"/g, '&quot;')})">
+          <i class="fas fa-paper-plane"></i> إرسال جميع الإجابات
+        </button>
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>فشل تحميل الأسئلة: ${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+// Check individual answer
+window.checkAnswer = async function(questionId, lessonId) {
+  const selected = document.querySelector(`input[name="q${questionId}"]:checked`);
+  const feedback = document.getElementById(`feedback-${questionId}`);
+  const questionCard = document.getElementById(`question-${questionId}`);
+  
+  if (!selected) {
+    feedback.innerHTML = '<span class="feedback-warning"><i class="fas fa-exclamation-circle"></i> الرجاء اختيار إجابة</span>';
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/lessons/${lessonId}/questions/${questionId}/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer: selected.value })
+    });
+    const result = await response.json();
+    
+    // Disable all options for this question
+    const options = questionCard.querySelectorAll('.option-item');
+    options.forEach(opt => {
+      opt.classList.remove('correct', 'incorrect');
+      const optLetter = opt.getAttribute('data-option');
+      if (optLetter === result.correctAnswer) {
+        opt.classList.add('correct');
+      } else if (optLetter === selected.value && !result.correct) {
+        opt.classList.add('incorrect');
+      }
+    });
+    
+    if (result.correct) {
+      feedback.innerHTML = '<span class="feedback-correct"><i class="fas fa-check-circle"></i> إجابة صحيحة! أحسنت</span>';
+      questionCard.classList.add('answered-correct');
+    } else {
+      feedback.innerHTML = '<span class="feedback-incorrect"><i class="fas fa-times-circle"></i> إجابة خاطئة</span>';
+      questionCard.classList.add('answered-incorrect');
+    }
+  } catch (error) {
+    feedback.innerHTML = '<span class="feedback-warning"><i class="fas fa-exclamation-circle"></i> حدث خطأ</span>';
+  }
+};
+
+// Submit all answers
+window.submitQuiz = async function(lessonId, questionIds) {
+  let correct = 0;
+  let total = questionIds.length;
+  
+  for (const qId of questionIds) {
+    const selected = document.querySelector(`input[name="q${qId}"]:checked`);
+    if (selected) {
+      try {
+        const response = await fetch(`/api/lessons/${lessonId}/questions/${qId}/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer: selected.value })
+        });
+        const result = await response.json();
+        if (result.correct) correct++;
+        
+        // Show feedback
+        const feedback = document.getElementById(`feedback-${qId}`);
+        const questionCard = document.getElementById(`question-${qId}`);
+        const options = questionCard.querySelectorAll('.option-item');
+        
+        options.forEach(opt => {
+          opt.classList.remove('correct', 'incorrect');
+          const optLetter = opt.getAttribute('data-option');
+          if (optLetter === result.correctAnswer) {
+            opt.classList.add('correct');
+          } else if (optLetter === selected.value && !result.correct) {
+            opt.classList.add('incorrect');
+          }
+        });
+        
+        if (result.correct) {
+          feedback.innerHTML = '<span class="feedback-correct"><i class="fas fa-check-circle"></i> صحيح</span>';
+          questionCard.classList.add('answered-correct');
+        } else {
+          feedback.innerHTML = '<span class="feedback-incorrect"><i class="fas fa-times-circle"></i> خطأ</span>';
+          questionCard.classList.add('answered-incorrect');
+        }
+      } catch (e) {}
+    }
+  }
+  
+  const scoreDiv = document.getElementById('quiz-score');
+  const percentage = Math.round((correct / total) * 100);
+  scoreDiv.innerHTML = `
+    <div class="score-result ${percentage >= 50 ? 'score-pass' : 'score-fail'}">
+      <i class="fas ${percentage >= 50 ? 'fa-trophy' : 'fa-sad-tear'}"></i>
+      <span>النتيجة: ${correct} من ${total} (${percentage}%)</span>
+    </div>
+  `;
+  scoreDiv.scrollIntoView({ behavior: 'smooth' });
+};
 
 // Utility function to extract YouTube video ID
 function extractYouTubeId(url) {

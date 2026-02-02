@@ -860,6 +860,7 @@ router.on('/admin/lessons', async () => {
             <td>${new Date(lesson.created_at).toLocaleDateString()}</td>
             <td class="table-actions">
               <button class="btn btn-sm btn-primary" onclick="editLesson(${lesson.id})"><i class="fas fa-edit"></i> تعديل</button>
+              <button class="btn btn-sm btn-info" onclick="manageQuestions(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-question-circle"></i> الأسئلة</button>
               <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id}, '${escapeHtml((lesson.title || lesson.title_ar)).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i> حذف</button>
             </td>
           </tr>
@@ -1447,6 +1448,278 @@ window.uploadEditImage = async function(input, event) {
     showAlert('تم رفع الصورة بنجاح!');
   } catch (error) {
     showAlert('خطأ في رفع الصورة: ' + error.message, 'error');
+  }
+};
+
+// ==================== QUESTIONS MANAGEMENT ====================
+
+window.manageQuestions = async function(lessonId, lessonTitle) {
+  try {
+    const questions = await adminApi.get(`/api/lessons/${lessonId}/questions/admin`);
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'questions-modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+          <h2><i class="fas fa-question-circle"></i> إدارة أسئلة: ${escapeHtml(lessonTitle)}</h2>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        </div>
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <div class="questions-list-admin" id="questions-list-admin">
+            ${questions.length === 0 
+              ? '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>'
+              : questions.map((q, idx) => renderQuestionAdmin(q, idx, lessonId)).join('')
+            }
+          </div>
+          <div class="add-question-section" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0;">
+            <h4 style="margin-bottom: 1rem;"><i class="fas fa-plus-circle"></i> إضافة سؤال جديد</h4>
+            <div id="new-question-form">
+              <div class="form-group">
+                <label>نص السؤال *</label>
+                <textarea id="new-q-text" rows="2" placeholder="أدخل نص السؤال هنا..." style="width: 100%;"></textarea>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label>أ) الخيار الأول *</label>
+                  <input type="text" id="new-q-a" placeholder="الخيار أ">
+                </div>
+                <div class="form-group">
+                  <label>ب) الخيار الثاني *</label>
+                  <input type="text" id="new-q-b" placeholder="الخيار ب">
+                </div>
+                <div class="form-group">
+                  <label>ج) الخيار الثالث *</label>
+                  <input type="text" id="new-q-c" placeholder="الخيار ج">
+                </div>
+                <div class="form-group">
+                  <label>د) الخيار الرابع *</label>
+                  <input type="text" id="new-q-d" placeholder="الخيار د">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>الإجابة الصحيحة *</label>
+                <select id="new-q-correct" style="width: 200px;">
+                  <option value="">اختر الإجابة الصحيحة</option>
+                  <option value="A">أ</option>
+                  <option value="B">ب</option>
+                  <option value="C">ج</option>
+                  <option value="D">د</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="addQuestion(${lessonId})">
+                <i class="fas fa-plus"></i> إضافة السؤال
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem; border-top: 1px solid #e2e8f0; text-align: left;">
+          <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">إغلاق</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  } catch (error) {
+    showAlert('خطأ في تحميل الأسئلة: ' + error.message, 'error');
+  }
+};
+
+function renderQuestionAdmin(q, idx, lessonId) {
+  const correctLabels = { A: 'أ', B: 'ب', C: 'ج', D: 'د' };
+  return `
+    <div class="question-admin-card" id="admin-q-${q.id}" style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+        <span style="background: linear-gradient(135deg, #1e3a8a, #0891b2); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">السؤال ${idx + 1}</span>
+        <div>
+          <button class="btn btn-sm btn-primary" onclick="editQuestion(${q.id}, ${lessonId})"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-sm btn-danger" onclick="deleteQuestion(${q.id}, ${lessonId})"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <p style="font-weight: 600; margin-bottom: 0.75rem;">${escapeHtml(q.question_text)}</p>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+        <div style="padding: 0.5rem; background: ${q.correct_answer === 'A' ? '#dcfce7' : 'white'}; border-radius: 4px; border: 1px solid ${q.correct_answer === 'A' ? '#22c55e' : '#e2e8f0'};">
+          <strong>أ)</strong> ${escapeHtml(q.option_a)} ${q.correct_answer === 'A' ? '<i class="fas fa-check" style="color: #22c55e;"></i>' : ''}
+        </div>
+        <div style="padding: 0.5rem; background: ${q.correct_answer === 'B' ? '#dcfce7' : 'white'}; border-radius: 4px; border: 1px solid ${q.correct_answer === 'B' ? '#22c55e' : '#e2e8f0'};">
+          <strong>ب)</strong> ${escapeHtml(q.option_b)} ${q.correct_answer === 'B' ? '<i class="fas fa-check" style="color: #22c55e;"></i>' : ''}
+        </div>
+        <div style="padding: 0.5rem; background: ${q.correct_answer === 'C' ? '#dcfce7' : 'white'}; border-radius: 4px; border: 1px solid ${q.correct_answer === 'C' ? '#22c55e' : '#e2e8f0'};">
+          <strong>ج)</strong> ${escapeHtml(q.option_c)} ${q.correct_answer === 'C' ? '<i class="fas fa-check" style="color: #22c55e;"></i>' : ''}
+        </div>
+        <div style="padding: 0.5rem; background: ${q.correct_answer === 'D' ? '#dcfce7' : 'white'}; border-radius: 4px; border: 1px solid ${q.correct_answer === 'D' ? '#22c55e' : '#e2e8f0'};">
+          <strong>د)</strong> ${escapeHtml(q.option_d)} ${q.correct_answer === 'D' ? '<i class="fas fa-check" style="color: #22c55e;"></i>' : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.addQuestion = async function(lessonId) {
+  const questionText = document.getElementById('new-q-text').value.trim();
+  const optionA = document.getElementById('new-q-a').value.trim();
+  const optionB = document.getElementById('new-q-b').value.trim();
+  const optionC = document.getElementById('new-q-c').value.trim();
+  const optionD = document.getElementById('new-q-d').value.trim();
+  const correctAnswer = document.getElementById('new-q-correct').value;
+  
+  if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
+    showAlert('جميع الحقول مطلوبة', 'error');
+    return;
+  }
+  
+  try {
+    await adminApi.post(`/api/lessons/${lessonId}/questions`, {
+      question_text: questionText,
+      option_a: optionA,
+      option_b: optionB,
+      option_c: optionC,
+      option_d: optionD,
+      correct_answer: correctAnswer
+    });
+    
+    showAlert('تم إضافة السؤال بنجاح!');
+    
+    // Refresh the modal
+    document.getElementById('questions-modal').remove();
+    const lessonTitle = document.querySelector('.modal-header h2')?.textContent.split(': ')[1] || '';
+    manageQuestions(lessonId, lessonTitle);
+  } catch (error) {
+    showAlert('خطأ في إضافة السؤال: ' + error.message, 'error');
+  }
+};
+
+window.editQuestion = async function(questionId, lessonId) {
+  try {
+    const questions = await adminApi.get(`/api/lessons/${lessonId}/questions/admin`);
+    const q = questions.find(question => question.id === questionId);
+    if (!q) {
+      showAlert('السؤال غير موجود', 'error');
+      return;
+    }
+    
+    const editModal = document.createElement('div');
+    editModal.className = 'modal active';
+    editModal.style.zIndex = '10001';
+    editModal.innerHTML = `
+      <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+          <h2><i class="fas fa-edit"></i> تعديل السؤال</h2>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>نص السؤال *</label>
+            <textarea id="edit-q-text" rows="2" style="width: 100%;">${escapeHtml(q.question_text)}</textarea>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label>أ) الخيار الأول *</label>
+              <input type="text" id="edit-q-a" value="${escapeHtml(q.option_a)}">
+            </div>
+            <div class="form-group">
+              <label>ب) الخيار الثاني *</label>
+              <input type="text" id="edit-q-b" value="${escapeHtml(q.option_b)}">
+            </div>
+            <div class="form-group">
+              <label>ج) الخيار الثالث *</label>
+              <input type="text" id="edit-q-c" value="${escapeHtml(q.option_c)}">
+            </div>
+            <div class="form-group">
+              <label>د) الخيار الرابع *</label>
+              <input type="text" id="edit-q-d" value="${escapeHtml(q.option_d)}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الإجابة الصحيحة *</label>
+            <select id="edit-q-correct" style="width: 200px;">
+              <option value="A" ${q.correct_answer === 'A' ? 'selected' : ''}>أ</option>
+              <option value="B" ${q.correct_answer === 'B' ? 'selected' : ''}>ب</option>
+              <option value="C" ${q.correct_answer === 'C' ? 'selected' : ''}>ج</option>
+              <option value="D" ${q.correct_answer === 'D' ? 'selected' : ''}>د</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem; border-top: 1px solid #e2e8f0;">
+          <button class="btn btn-primary" onclick="saveQuestionEdit(${questionId}, ${lessonId})">
+            <i class="fas fa-save"></i> حفظ التغييرات
+          </button>
+          <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">إلغاء</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(editModal);
+  } catch (error) {
+    showAlert('خطأ في تحميل السؤال: ' + error.message, 'error');
+  }
+};
+
+window.saveQuestionEdit = async function(questionId, lessonId) {
+  const questionText = document.getElementById('edit-q-text').value.trim();
+  const optionA = document.getElementById('edit-q-a').value.trim();
+  const optionB = document.getElementById('edit-q-b').value.trim();
+  const optionC = document.getElementById('edit-q-c').value.trim();
+  const optionD = document.getElementById('edit-q-d').value.trim();
+  const correctAnswer = document.getElementById('edit-q-correct').value;
+  
+  if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
+    showAlert('جميع الحقول مطلوبة', 'error');
+    return;
+  }
+  
+  try {
+    await adminApi.put(`/api/lessons/${lessonId}/questions/${questionId}`, {
+      question_text: questionText,
+      option_a: optionA,
+      option_b: optionB,
+      option_c: optionC,
+      option_d: optionD,
+      correct_answer: correctAnswer
+    });
+    
+    showAlert('تم تحديث السؤال بنجاح!');
+    
+    // Close edit modal
+    document.querySelectorAll('.modal').forEach(m => {
+      if (m.style.zIndex === '10001') m.remove();
+    });
+    
+    // Refresh the questions list
+    const questions = await adminApi.get(`/api/lessons/${lessonId}/questions/admin`);
+    const listContainer = document.getElementById('questions-list-admin');
+    if (listContainer) {
+      listContainer.innerHTML = questions.length === 0 
+        ? '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>'
+        : questions.map((q, idx) => renderQuestionAdmin(q, idx, lessonId)).join('');
+    }
+  } catch (error) {
+    showAlert('خطأ في تحديث السؤال: ' + error.message, 'error');
+  }
+};
+
+window.deleteQuestion = async function(questionId, lessonId) {
+  const confirmed = await showConfirmModal(
+    'حذف السؤال',
+    '<p>هل أنت متأكد من حذف هذا السؤال؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> لا يمكن التراجع عن هذا الإجراء.</p>'
+  );
+  
+  if (!confirmed) return;
+  
+  try {
+    await adminApi.delete(`/api/lessons/${lessonId}/questions/${questionId}`);
+    showAlert('تم حذف السؤال بنجاح!');
+    
+    // Remove the question card from DOM
+    const card = document.getElementById(`admin-q-${questionId}`);
+    if (card) card.remove();
+    
+    // Check if there are no more questions
+    const listContainer = document.getElementById('questions-list-admin');
+    if (listContainer && listContainer.children.length === 0) {
+      listContainer.innerHTML = '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>';
+    }
+  } catch (error) {
+    showAlert('خطأ في حذف السؤال: ' + error.message, 'error');
   }
 };
 

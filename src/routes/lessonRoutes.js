@@ -458,4 +458,144 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== QUESTIONS API ====================
+
+// PUBLIC: Get questions for a lesson (for students taking quiz)
+router.get('/:lessonId/questions', async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const questions = await db.all(
+      'SELECT id, lesson_id, question_text, option_a, option_b, option_c, option_d, display_order FROM questions WHERE lesson_id = ? ORDER BY display_order ASC',
+      [lessonId]
+    );
+    // Note: correct_answer is NOT included for students
+    res.json(questions || []);
+  } catch (error) {
+    console.error('Error fetching questions:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUBLIC: Check answer for a question
+router.post('/:lessonId/questions/:questionId/check', async (req, res) => {
+  try {
+    const { questionId } = req.params;
+    const { answer } = req.body;
+    
+    const question = await db.get('SELECT correct_answer FROM questions WHERE id = ?', [questionId]);
+    if (!question) {
+      return res.status(404).json({ error: 'السؤال غير موجود' });
+    }
+    
+    const isCorrect = answer.toUpperCase() === question.correct_answer.toUpperCase();
+    res.json({ 
+      correct: isCorrect,
+      correctAnswer: question.correct_answer
+    });
+  } catch (error) {
+    console.error('Error checking answer:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ADMIN: Get questions with answers (for editing)
+router.get('/:lessonId/questions/admin', authenticateToken, async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const questions = await db.all(
+      'SELECT * FROM questions WHERE lesson_id = ? ORDER BY display_order ASC',
+      [lessonId]
+    );
+    res.json(questions || []);
+  } catch (error) {
+    console.error('Error fetching questions for admin:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ADMIN: Add a question
+router.post('/:lessonId/questions', authenticateToken, async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const { question_text, option_a, option_b, option_c, option_d, correct_answer } = req.body;
+
+    // Validation
+    if (!question_text || !option_a || !option_b || !option_c || !option_d || !correct_answer) {
+      return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
+    }
+
+    if (!['A', 'B', 'C', 'D'].includes(correct_answer.toUpperCase())) {
+      return res.status(400).json({ error: 'الإجابة الصحيحة يجب أن تكون A أو B أو C أو D' });
+    }
+
+    // Get next display order
+    const lastQuestion = await db.get(
+      'SELECT MAX(display_order) as max_order FROM questions WHERE lesson_id = ?',
+      [lessonId]
+    );
+    const displayOrder = (lastQuestion?.max_order || 0) + 1;
+
+    const result = await db.run(
+      'INSERT INTO questions (lesson_id, question_text, option_a, option_b, option_c, option_d, correct_answer, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [lessonId, question_text, option_a, option_b, option_c, option_d, correct_answer.toUpperCase(), displayOrder]
+    );
+
+    const newQuestion = await db.get('SELECT * FROM questions WHERE id = ?', [result.id]);
+    res.status(201).json(newQuestion);
+  } catch (error) {
+    console.error('Error adding question:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ADMIN: Update a question
+router.put('/:lessonId/questions/:questionId', authenticateToken, async (req, res) => {
+  try {
+    const { questionId } = req.params;
+    const { question_text, option_a, option_b, option_c, option_d, correct_answer } = req.body;
+
+    // Validation
+    if (!question_text || !option_a || !option_b || !option_c || !option_d || !correct_answer) {
+      return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
+    }
+
+    if (!['A', 'B', 'C', 'D'].includes(correct_answer.toUpperCase())) {
+      return res.status(400).json({ error: 'الإجابة الصحيحة يجب أن تكون A أو B أو C أو D' });
+    }
+
+    const result = await db.run(
+      'UPDATE questions SET question_text = ?, option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_answer = ? WHERE id = ?',
+      [question_text, option_a, option_b, option_c, option_d, correct_answer.toUpperCase(), questionId]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'السؤال غير موجود' });
+    }
+
+    const updatedQuestion = await db.get('SELECT * FROM questions WHERE id = ?', [questionId]);
+    res.json(updatedQuestion);
+  } catch (error) {
+    console.error('Error updating question:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ADMIN: Delete a question
+router.delete('/:lessonId/questions/:questionId', authenticateToken, async (req, res) => {
+  try {
+    const { questionId } = req.params;
+
+    const result = await db.run('DELETE FROM questions WHERE id = ?', [questionId]);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'السؤال غير موجود' });
+    }
+
+    res.json({ success: true, message: 'تم حذف السؤال' });
+  } catch (error) {
+    console.error('Error deleting question:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;

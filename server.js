@@ -45,6 +45,20 @@ async function ensureTablesExist() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS questions (
+          id SERIAL PRIMARY KEY,
+          lesson_id INTEGER NOT NULL,
+          question_text TEXT NOT NULL,
+          option_a TEXT NOT NULL,
+          option_b TEXT NOT NULL,
+          option_c TEXT NOT NULL,
+          option_d TEXT NOT NULL,
+          correct_answer CHAR(1) NOT NULL,
+          display_order INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
     } else {
       await db.run(`
         CREATE TABLE IF NOT EXISTS videos (
@@ -67,6 +81,21 @@ async function ensureTablesExist() {
           position TEXT DEFAULT 'bottom',
           size TEXT DEFAULT 'medium',
           caption TEXT,
+          display_order INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+        )
+      `);
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS questions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          lesson_id INTEGER NOT NULL,
+          question_text TEXT NOT NULL,
+          option_a TEXT NOT NULL,
+          option_b TEXT NOT NULL,
+          option_c TEXT NOT NULL,
+          option_d TEXT NOT NULL,
+          correct_answer CHAR(1) NOT NULL,
           display_order INTEGER DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE

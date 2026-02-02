@@ -260,8 +260,10 @@ body {
   display: flex;
   min-height: 100vh;
   direction: rtl;
+  position: relative;
 }
 
+/* ==================== SIDEBAR ==================== */
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--sidebar-bg);
@@ -274,17 +276,6 @@ body {
   overflow-y: auto;
   z-index: 1001;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Hide sidebar by default on mobile */
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(100%);
-  }
-  
-  .sidebar.active {
-    transform: translateX(0);
-  }
 }
 
 .sidebar-header {
@@ -917,8 +908,8 @@ table tr:hover {
 .hamburger {
   display: none;
   position: fixed;
-  top: 0.75rem;
-  left: 1rem;
+  top: 15px;
+  left: 15px;
   z-index: 1002;
   background: var(--gradient-primary);
   border: none;
@@ -928,9 +919,9 @@ table tr:hover {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 5px;
-  width: 44px;
-  height: 44px;
+  gap: 6px;
+  width: 48px;
+  height: 48px;
   box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
   -webkit-tap-highlight-color: transparent;
   transition: all 0.3s ease;
@@ -947,8 +938,8 @@ table tr:hover {
 
 .hamburger span {
   display: block;
-  width: 22px;
-  height: 2.5px;
+  width: 26px;
+  height: 3px;
   background: white;
   border-radius: 2px;
   transition: all 0.3s ease;
@@ -960,7 +951,7 @@ table tr:hover {
 }
 
 .hamburger.active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
+  transform: rotate(45deg) translate(6px, 6px);
 }
 
 .hamburger.active span:nth-child(2) {
@@ -969,7 +960,7 @@ table tr:hover {
 }
 
 .hamburger.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(5px, -5px);
+  transform: rotate(-45deg) translate(6px, -6px);
 }
 
 /* Sidebar Overlay */
@@ -995,6 +986,18 @@ table tr:hover {
 @media (max-width: 768px) {
   .hamburger {
     display: flex;
+  }
+
+  /* Sidebar - hidden by default on mobile, slides from right (RTL) */
+  .sidebar {
+    transform: translateX(100%);
+    width: 280px;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Sidebar visible when active */
+  .sidebar.active {
+    transform: translateX(0);
   }
 
   .admin-main {
@@ -1124,16 +1127,21 @@ table tr:hover {
 /* Small Mobile (up to 480px) */
 @media (max-width: 480px) {
   .hamburger {
-    top: 0.5rem;
-    left: 0.5rem;
-    width: 40px;
-    height: 40px;
+    top: 10px;
+    left: 10px;
+    width: 44px;
+    height: 44px;
     padding: 8px;
+    gap: 5px;
   }
 
   .hamburger span {
-    width: 20px;
-    height: 2px;
+    width: 24px;
+    height: 3px;
+  }
+
+  .sidebar {
+    width: 100%;
   }
 
   .admin-main {
@@ -1143,10 +1151,6 @@ table tr:hover {
 
   .admin-header h1 {
     font-size: 1.25rem;
-  }
-
-  .sidebar {
-    width: 100%;
   }
 
   .sidebar-header {

@@ -81,8 +81,10 @@ const adminApi = {
       }
       if (!response.ok) {
         const errorData = await safeParseJson(response);
+        const error = new Error(errorData?.error || errorData?.message || 'فشل تحميل البيانات');
+        error.apiError = errorData;  // Preserve full error data
         console.error('API GET Error:', url, errorData);
-        throw new Error(errorData?.error || errorData?.message || 'فشل تحميل البيانات');
+        throw error;
       }
       return safeParseJson(response);
     } catch (error) {
@@ -103,8 +105,10 @@ const adminApi = {
         throw new Error('غير مصرح');
       }
       if (!response.ok) {
-        const error = await safeParseJson(response);
-        throw new Error(error.error || 'حدث خطأ');
+        const errorData = await safeParseJson(response);
+        const error = new Error(errorData.error || 'حدث خطأ');
+        error.apiError = errorData;  // Preserve full error data
+        throw error;
       }
       return safeParseJson(response);
     } catch (error) {
@@ -124,8 +128,10 @@ const adminApi = {
         throw new Error('غير مصرح');
       }
       if (!response.ok) {
-        const error = await safeParseJson(response);
-        throw new Error(error.error || 'فشل التحديث');
+        const errorData = await safeParseJson(response);
+        const error = new Error(errorData.error || 'فشل التحديث');
+        error.apiError = errorData;  // Preserve full error data
+        throw error;
       }
       return safeParseJson(response);
     } catch (error) {
@@ -1243,12 +1249,12 @@ window.editLesson = async function(id) {
         
         videoElements.forEach(el => {
           const url = el.querySelector('input[type="url"]').value;
-          if (url) {
+          if (url && url.trim()) {
             videos.push({
               video_url: url,
               video_position: el.querySelector('select[name="position"]').value,
-              video_size: 'medium',
-              video_explanation: el.querySelector('textarea').value
+              video_size: 'large',
+              video_explanation: el.querySelector('textarea').value || ''
             });
           }
         });
@@ -1258,12 +1264,13 @@ window.editLesson = async function(id) {
         
         imageElements.forEach(el => {
           const imagePath = el.getAttribute('data-image-path');
-          if (imagePath) {
+          const caption = el.querySelector('textarea').value;
+          if (imagePath && imagePath.trim()) {
             images.push({
               image_path: imagePath,
               image_position: el.querySelector('select[name="image-position"]').value,
               image_size: 'medium',
-              image_caption: el.querySelector('textarea').value
+              image_caption: caption || ''
             });
           }
         });
@@ -1279,8 +1286,20 @@ window.editLesson = async function(id) {
         router.navigate('/admin/lessons');
         showAlert('تم تحديث الدرس بنجاح!');
       } catch (error) {
+        console.error('Save lesson error:', {
+          message: error.message,
+          apiError: error.apiError,
+          fullError: error
+        });
         errorDiv.style.display = 'block';
-        errorMsg.textContent = error.message;
+        let errorText = error.message;
+        if (error.apiError?.details) {
+          errorText += ': ' + error.apiError.details;
+        }
+        if (error.apiError?.stage) {
+          errorText += ` (${error.apiError.stage})`;
+        }
+        errorMsg.textContent = errorText;
       }
     });
   } catch (error) {

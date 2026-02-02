@@ -213,12 +213,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { title, unit_id, content, videos, images } = req.body;
     const { id } = req.params;
 
-    console.log('[PUT /api/lessons/:id] Payload:', {
+    console.log('[PUT /api/lessons/:id] START - Payload:', {
       id,
       title,
       unit_id,
       videosCount: Array.isArray(videos) ? videos.length : 0,
-      imagesCount: Array.isArray(images) ? images.length : 0
+      imagesCount: Array.isArray(images) ? images.length : 0,
+      videoDetails: videos,
+      imageDetails: images
     });
 
     // Validation: Check if title is empty
@@ -291,10 +293,18 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Handle videos: delete old ones and insert new ones
     if (videos && Array.isArray(videos)) {
       try {
+        console.log('[PUT /api/lessons/:id] Processing videos:', JSON.stringify(videos, null, 2));
         await db.run('DELETE FROM videos WHERE lesson_id = ?', [id]);
         for (let i = 0; i < videos.length; i++) {
           const v = videos[i];
           if (v.video_url) {
+            console.log(`[PUT /api/lessons/:id] Inserting video ${i}:`, {
+              lesson_id: id,
+              video_url: v.video_url,
+              position: v.video_position || 'bottom',
+              size: v.video_size || 'large',
+              explanation: v.video_explanation || null
+            });
             await db.run(
               'INSERT INTO videos (lesson_id, video_url, position, size, explanation, display_order) VALUES (?, ?, ?, ?, ?, ?)',
               [id, v.video_url, v.video_position || 'bottom', v.video_size || 'large', v.video_explanation || null, i]
@@ -314,10 +324,18 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Handle images: delete old ones and insert new ones
     if (images && Array.isArray(images)) {
       try {
+        console.log('[PUT /api/lessons/:id] Processing images:', JSON.stringify(images, null, 2));
         await db.run('DELETE FROM images WHERE lesson_id = ?', [id]);
         for (let i = 0; i < images.length; i++) {
           const img = images[i];
           if (img.image_path) {
+            console.log(`[PUT /api/lessons/:id] Inserting image ${i}:`, {
+              lesson_id: id,
+              image_path: img.image_path,
+              position: img.image_position || 'bottom',
+              size: img.image_size || 'medium',
+              caption: img.image_caption || null
+            });
             await db.run(
               'INSERT INTO images (lesson_id, image_path, position, size, caption, display_order) VALUES (?, ?, ?, ?, ?, ?)',
               [id, img.image_path, img.image_position || 'bottom', img.image_size || 'medium', img.image_caption || null, i]

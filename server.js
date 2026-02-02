@@ -4,6 +4,8 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const compression = require('compression');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./src/routes/authRoutes');
 const classRoutes = require('./src/routes/classRoutes');
@@ -13,6 +15,19 @@ const db = require('./src/database/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === 'production';
+
+// ==================== SECURITY VALIDATION ====================
+// Validate critical environment variables on startup
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production') {
+  console.error('[SECURITY ERROR] JWT_SECRET not set or using default value!');
+  console.error('[SECURITY ERROR] Application will not start without proper JWT_SECRET');
+  process.exit(1);
+}
+
+if (isProd && process.env.JWT_SECRET.length < 32) {
+  console.error('[SECURITY WARNING] JWT_SECRET should be at least 32 characters in production');
+}
 
 // Ensure required tables exist on startup
 async function ensureTablesExist() {
@@ -103,8 +118,12 @@ async function ensureTablesExist() {
       `);
     }
     console.log('✓ Database tables verified');
+    
+    // Run database optimization (create indexes)
+    const { optimizeDatabase } = require('./src/database/optimizeDatabase');
+    await optimizeDatabase();
   } catch (error) {
-    console.error('Warning: Could not verify tables:', error.message);
+    console.error('Warning: Database setup error:', error.message);
   }
 }
 
@@ -115,36 +134,76 @@ setTimeout(ensureTablesExist, 1000);
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true, // Allow cookies
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
-if (process.env.NODE_ENV === 'production') {
+if (isProd) {
   app.use(cors(corsOptions));
 }
 
+// ==================== SECURITY MIDDLEWARE ====================
+// Helmet - Set secure HTTP headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Rate Limiting - Prevent brute force attacks
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: 'عدد كبير من الطلبات. يرجى المحاولة لاحقاً' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Strict rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login attempts per 15 minutes
+  message: { error: 'عدد كبير من محاولات تسجيل الدخول. يرجى المحاولة بعد 15 دقيقة' },
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to API routes
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+
 // Middleware
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Limit payload size
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Cache Control Middleware
 // Static assets (CSS, JS, images) are cached but use versioning for cache-busting
 // HTML files are never cached to ensure users always get the latest version
-const isProd = process.env.NODE_ENV === 'production';
 
 app.use((req, res, next) => {
-  const path = req.path.toLowerCase();
+  const reqPath = req.path.toLowerCase();
   
   // Never cache HTML files - always fetch fresh
-  if (path.endsWith('.html') || path === '/' || path.startsWith('/admin')) {
+  if (reqPath.endsWith('.html') || reqPath === '/' || reqPath.startsWith('/admin')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
   }
   // Cache static assets (CSS, JS, fonts, images) for 7 days in production
   // These use version query parameters for cache-busting (e.g., style.css?v=1.0.1)
-  else if (path.match(/\.(css|js|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$/)) {
+  else if (reqPath.match(/\.(css|js|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$/)) {
     const maxAge = isProd ? 7 * 24 * 60 * 60 : 0; // 7 days in seconds for production
     res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
   }
@@ -190,20 +249,39 @@ app.use((req, res) => {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   const status = err.status || err.statusCode || 500;
-  const isDev = process.env.NODE_ENV !== 'production';
   
+  // Log error details server-side
   console.error(`[ERROR] ${status} - ${err.message}`);
-  if (isDev) {
+  if (!isProd) {
     console.error(err.stack);
   }
 
-  res.status(status).json({
-    error: err.message || 'حدث خطأ في الخادم',
-    ...(isDev && { stack: err.stack })
+  // Never expose internal error details in production
+  const errorResponse = {
+    error: isProd ? 'حدث خطأ في الخادم' : err.message
+  };
+  
+  // Include stack trace only in development
+  if (!isProd && err.stack) {
+    errorResponse.stack = err.stack;
+  }
+
+  res.status(status).json(errorResponse);
+});
+
+// Graceful shutdown handler
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  app.close(() => {
+    console.log('HTTP server closed');
+    if (db.close) {
+      db.close();
+    }
   });
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

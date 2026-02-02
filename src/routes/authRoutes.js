@@ -54,7 +54,13 @@ router.post('/login', async (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('authToken');
+  // Clear cookie with same options used when setting it
+  res.clearCookie('authToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/'
+  });
   res.json({ success: true });
 });
 
@@ -68,7 +74,9 @@ router.get('/verify', async (req, res) => {
 
   try {
     const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { JWT_SECRET } = require('../middleware/auth');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
     res.json({
       authenticated: true,
       admin: {
@@ -77,6 +85,8 @@ router.get('/verify', async (req, res) => {
       }
     });
   } catch (error) {
+    // Clear invalid token
+    res.clearCookie('authToken');
     res.status(401).json({ authenticated: false });
   }
 });

@@ -8,15 +8,18 @@ const streamifier = require('streamifier');
 const router = express.Router();
 
 // Configure Cloudinary with environment variables
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-console.log('Cloudinary Config - Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME ? `✓ Set (${process.env.CLOUDINARY_CLOUD_NAME})` : '✗ Missing');
-console.log('Cloudinary Config - API Key:', process.env.CLOUDINARY_API_KEY ? `✓ Set (${process.env.CLOUDINARY_API_KEY.substring(0, 8)}...)` : '✗ Missing');
-console.log('Cloudinary Config - API Secret:', process.env.CLOUDINARY_API_SECRET ? `✓ Set (${process.env.CLOUDINARY_API_SECRET.substring(0, 8)}...)` : '✗ Missing');
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✓ Cloudinary configured');
+  }
+} else {
+  console.warn('⚠ Cloudinary credentials not configured - image uploads will fail');
+}
 
 // Configure multer for image uploads (memory storage for Cloudinary)
 const upload = multer({
@@ -213,16 +216,6 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const { title, unit_id, content, videos, images } = req.body;
     const { id } = req.params;
 
-    console.log('[PUT /api/lessons/:id] START - Payload:', {
-      id,
-      title,
-      unit_id,
-      videosCount: Array.isArray(videos) ? videos.length : 0,
-      imagesCount: Array.isArray(images) ? images.length : 0,
-      videoDetails: videos,
-      imageDetails: images
-    });
-
     // Validation: Check if title is empty
     if (!title || title.trim() === '') {
       return res.status(400).json({ 
@@ -278,11 +271,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
         [trimmedTitle, unit_id, content || '', id]
       );
     } catch (updateError) {
-      console.error('[PUT /api/lessons/:id] Update error:', updateError);
+      console.error('[ERROR] Lesson update failed:', updateError.message);
       return res.status(500).json({
-        error: 'حدث خطأ في الخادم',
-        stage: 'update_lesson',
-        details: updateError.message
+        error: 'حدث خطأ في تحديث الدرس'
       });
     }
 
@@ -293,25 +284,19 @@ router.put('/:id', authenticateToken, async (req, res) => {
     // Handle videos: delete old ones and insert new ones
     if (videos && Array.isArray(videos) && videos.length > 0) {
       try {
-        console.log('[PUT /api/lessons/:id] Processing videos:', JSON.stringify(videos, null, 2));
-        
-        // Try to delete old videos - if table doesn't exist, this will fail gracefully
+        // Delete old videos
         try {
           await db.run('DELETE FROM videos WHERE lesson_id = ?', [id]);
         } catch (delErr) {
-          console.log('[PUT /api/lessons/:id] Note: Could not delete old videos:', delErr.message);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('Could not delete old videos:', delErr.message);
+          }
         }
         
+        // Insert new videos
         for (let i = 0; i < videos.length; i++) {
           const v = videos[i];
           if (v.video_url) {
-            console.log(`[PUT /api/lessons/:id] Inserting video ${i}:`, {
-              lesson_id: id,
-              video_url: v.video_url,
-              position: v.video_position || 'bottom',
-              size: v.video_size || 'large',
-              explanation: v.video_explanation || null
-            });
             await db.run(
               'INSERT INTO videos (lesson_id, video_url, position, size, explanation, display_order) VALUES (?, ?, ?, ?, ?, ?)',
               [id, v.video_url, v.video_position || 'bottom', v.video_size || 'large', v.video_explanation || null, i]
@@ -319,34 +304,26 @@ router.put('/:id', authenticateToken, async (req, res) => {
           }
         }
       } catch (videoError) {
-        console.error('[PUT /api/lessons/:id] Videos error:', videoError);
-        // Don't fail the whole request - just log the error
-        console.log('[PUT /api/lessons/:id] Continuing without saving videos');
+        console.error('[ERROR] Video processing failed:', videoError.message);
       }
     }
 
     // Handle images: delete old ones and insert new ones
     if (images && Array.isArray(images) && images.length > 0) {
       try {
-        console.log('[PUT /api/lessons/:id] Processing images:', JSON.stringify(images, null, 2));
-        
-        // Try to delete old images - if table doesn't exist, this will fail gracefully
+        // Delete old images
         try {
           await db.run('DELETE FROM images WHERE lesson_id = ?', [id]);
         } catch (delErr) {
-          console.log('[PUT /api/lessons/:id] Note: Could not delete old images:', delErr.message);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('Could not delete old images:', delErr.message);
+          }
         }
         
+        // Insert new images
         for (let i = 0; i < images.length; i++) {
           const img = images[i];
           if (img.image_path) {
-            console.log(`[PUT /api/lessons/:id] Inserting image ${i}:`, {
-              lesson_id: id,
-              image_path: img.image_path,
-              position: img.image_position || 'bottom',
-              size: img.image_size || 'medium',
-              caption: img.image_caption || null
-            });
             await db.run(
               'INSERT INTO images (lesson_id, image_path, position, size, caption, display_order) VALUES (?, ?, ?, ?, ?, ?)',
               [id, img.image_path, img.image_position || 'bottom', img.image_size || 'medium', img.image_caption || null, i]
@@ -354,15 +331,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
           }
         }
       } catch (imageError) {
-        console.error('[PUT /api/lessons/:id] Images error:', imageError);
-        // Don't fail the whole request - just log the error
-        console.log('[PUT /api/lessons/:id] Continuing without saving images');
+        console.error('[ERROR] Image processing failed:', imageError.message);
       }
     }
 
     const updatedLesson = await db.get('SELECT * FROM lessons WHERE id = ?', [id]);
     
-    // Try to get videos and images, but don't fail if tables don't exist
+    // Fetch videos and images
     let lessonsVideos = [];
     let lessonsImages = [];
     try {
@@ -371,7 +346,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         [id]
       ) || [];
     } catch (e) {
-      console.log('[PUT /api/lessons/:id] Could not fetch videos:', e.message);
+      // Videos table may not exist yet
     }
     try {
       lessonsImages = await db.all(
@@ -379,18 +354,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
         [id]
       ) || [];
     } catch (e) {
-      console.log('[PUT /api/lessons/:id] Could not fetch images:', e.message);
+      // Images table may not exist yet
     }
     
-    console.log('[PUT /api/lessons/:id] SUCCESS - Lesson updated');
     res.json({ ...updatedLesson, videos: lessonsVideos, images: lessonsImages });
   } catch (error) {
-    console.error('Error updating lesson:', error);
-    res.status(500).json({
-      error: 'حدث خطأ في الخادم',
-      stage: 'unknown',
-      details: error.message
-    });
+    console.error('[ERROR] Lesson update failed:', error.message);
+    res.status(500).json({ error: 'حدث خطأ في تحديث الدرس' });
   }
 });
 
@@ -401,14 +371,11 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
       return res.status(400).json({ error: 'لم يتم توفير ملف صورة', code: 'NO_FILE' });
     }
 
-    console.log('Uploading image:', req.file.originalname, 'Size:', req.file.size);
-    
-    // Configure with explicit hardcoded credentials
-    cloudinary.config({
-      cloud_name: 'dm0srrhnh',
-      api_key: '823123349873943',
-      api_secret: '2802Hvdcyq4ZFDsF5kE7ZY9dELw'
-    });
+    // Validate Cloudinary configuration
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('[SECURITY] Cloudinary credentials not configured');
+      return res.status(500).json({ error: 'خطأ في إعدادات الخادم', code: 'CONFIG_ERROR' });
+    }
 
     const uploadFromBuffer = () => new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -418,10 +385,9 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
         },
         (error, result) => {
           if (error) {
-            console.error('Cloudinary error:', error.message, error);
+            console.error('[ERROR] Cloudinary upload failed:', error.message);
             return reject(error);
           }
-          console.log('Image uploaded successfully:', result.secure_url);
           resolve(result);
         }
       );
@@ -432,9 +398,9 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
     const result = await uploadFromBuffer();
     res.json({ imagePath: result.secure_url });
   } catch (error) {
-    console.error('Error uploading image:', error.message || error);
+    console.error('[ERROR] Image upload failed:', error.message);
     res.status(500).json({ 
-      error: 'فشل تحميل الصورة: ' + (error.message || 'خطأ غير معروف'),
+      error: 'فشل تحميل الصورة',
       code: 'UPLOAD_ERROR'
     });
   }

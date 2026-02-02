@@ -59,11 +59,9 @@ class Router {
           <i class="fas fa-exclamation-triangle"></i>
           <h3>خطأ</h3>
           <p>${message}</p>
-          <button id="backHomeBtn" class="btn">العودة للرئيسية</button>
+          <button onclick="location.href='/'" class="btn">العودة للرئيسية</button>
         </div>
       `;
-      const backHomeBtn = document.getElementById('backHomeBtn');
-      if (backHomeBtn) backHomeBtn.onclick = () => location.href = '/';
     }
   }
 }
@@ -590,26 +588,16 @@ async function loadQuestions(lessonId, container) {
                   <span class="option-text">${escapeHtml(q.option_d)}</span>
                 </label>
               </div>
-              <button class="btn btn-check-answer" data-check-answer="${q.id}">
+              <button class="btn btn-check-answer" onclick="checkAnswer(${q.id}, ${lessonId})">
                 <i class="fas fa-check"></i> تحقق من الإجابة
               </button>
               <div class="answer-feedback" id="feedback-${q.id}"></div>
             </div>
           `).join('')}
         </div>
-        <button class="btn btn-submit-quiz" id="submitQuizBtn">
+        <button class="btn btn-submit-quiz" onclick="submitQuiz(${lessonId}, ${JSON.stringify(questions.map(q => q.id)).replace(/"/g, '&quot;')})">
           <i class="fas fa-paper-plane"></i> إرسال جميع الإجابات
         </button>
-          // Add event listeners for check answer buttons
-          container.querySelectorAll('[data-check-answer]').forEach(btn => {
-            btn.onclick = () => {
-              const qid = btn.getAttribute('data-check-answer');
-              checkAnswer(qid, lessonId);
-            };
-          });
-          // Add event listener for submit quiz
-          const submitQuizBtn = container.querySelector('#submitQuizBtn');
-          if (submitQuizBtn) submitQuizBtn.onclick = () => submitQuiz(lessonId, questions.map(q => q.id));
       </div>
     `;
   } catch (error) {

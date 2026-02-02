@@ -52,7 +52,7 @@ router.get('/:id', async (req, res) => {
     const lesson = await db.get('SELECT * FROM lessons WHERE id = ?', [req.params.id]);
     
     if (!lesson) {
-      return res.status(404).json({ error: 'Lesson not found' });
+      return res.status(404).json({ error: 'الدرس غير موجود', message: 'Lesson not found' });
     }
     
     // Get all videos for this lesson
@@ -70,7 +70,7 @@ router.get('/:id', async (req, res) => {
     res.json({ ...lesson, videos, images });
   } catch (error) {
     console.error('Error fetching lesson:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'خطأ في الخادم', message: error.message });
   }
 });
 

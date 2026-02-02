@@ -80,10 +80,13 @@ const adminApi = {
         throw new Error('غير مصرح');
       }
       if (!response.ok) {
-        throw new Error('فشل تحميل البيانات');
+        const errorData = await safeParseJson(response);
+        console.error('API GET Error:', url, errorData);
+        throw new Error(errorData?.error || errorData?.message || 'فشل تحميل البيانات');
       }
       return safeParseJson(response);
     } catch (error) {
+      console.error('API GET Exception:', url, error);
       throw error;
     }
   },

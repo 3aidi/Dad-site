@@ -53,10 +53,25 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Error handling middleware
+// 404 handler (before global error handler)
+app.use((req, res) => {
+  res.status(404).json({ error: 'Resource not found' });
+});
+
+// Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Internal server error' });
+  const status = err.status || err.statusCode || 500;
+  const isDev = process.env.NODE_ENV !== 'production';
+  
+  console.error(`[ERROR] ${status} - ${err.message}`);
+  if (isDev) {
+    console.error(err.stack);
+  }
+
+  res.status(status).json({
+    error: err.message || 'حدث خطأ في الخادم',
+    ...(isDev && { stack: err.stack })
+  });
 });
 
 app.listen(PORT, () => {

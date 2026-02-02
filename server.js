@@ -145,17 +145,19 @@ if (isProd) {
 
 // ==================== SECURITY MIDDLEWARE ====================
 // Helmet - Set secure HTTP headers
+// In development: Disable CSP to allow inline scripts
+// In production: Enable strict CSP for security
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: isProd ? {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "https:", "http:"],
       connectSrc: ["'self'"]
     }
-  },
+  } : false,
   crossOriginEmbedderPolicy: false
 }));
 

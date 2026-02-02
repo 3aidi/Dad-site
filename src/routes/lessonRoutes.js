@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database/database');
 const { authenticateToken } = require('../middleware/auth');
+const { parsePositiveInteger } = require('../utils/validation');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
@@ -38,9 +39,13 @@ const upload = multer({
 // PUBLIC: Get lessons by unit ID
 router.get('/unit/:unitId', async (req, res) => {
   try {
+    const parsed = parsePositiveInteger(req.params.unitId);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid unit id' });
+    }
     const lessons = await db.all(
       'SELECT id, unit_id, title, created_at FROM lessons WHERE unit_id = ? ORDER BY created_at ASC',
-      [req.params.unitId]
+      [parsed.value]
     );
     res.json(lessons);
   } catch (error) {
@@ -52,45 +57,29 @@ router.get('/unit/:unitId', async (req, res) => {
 // PUBLIC: Get single lesson with full content
 router.get('/:id', async (req, res) => {
   try {
-    const id = req.params.id;
-    const lesson = await db.get('SELECT * FROM lessons WHERE id = ?', [id]);
-    
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+    const id = parsed.value;
+    const [lesson, videos, images] = await Promise.all([
+      db.get('SELECT * FROM lessons WHERE id = ?', [id]),
+      db.all('SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC', [id]).catch(() => []),
+      db.all('SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC', [id]).catch(() => [])
+    ]);
+
     if (!lesson) {
       return res.status(404).json({ error: 'الدرس غير موجود' });
     }
-    
-    let videos = [];
-    let images = [];
-    
-    try {
-      videos = await db.all(
-        'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
-        [lesson.id]
-      ) || [];
-    } catch (videoErr) {
-      console.error('Error fetching videos:', videoErr.message);
-    }
-    
-    try {
-      images = await db.all(
-        'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
-        [lesson.id]
-      ) || [];
-    } catch (imageErr) {
-      console.error('Error fetching images:', imageErr.message);
-    }
-    
-    res.json({ 
-      ...lesson, 
+
+    res.json({
+      ...lesson,
       videos: videos || [],
       images: images || []
     });
   } catch (error) {
-    console.error('Error in GET /api/lessons/:id:', error);
-    res.status(500).json({ 
-      error: 'خطأ في الخادم',
-      details: error.message 
-    });
+    console.error('Error in GET /api/lessons/:id:', error.message);
+    res.status(500).json({ error: 'خطأ في الخادم' });
   }
 });
 
@@ -123,26 +112,25 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!unit_id) {
-      return res.status(400).json({ 
+    const unitIdParsed = parsePositiveInteger(unit_id);
+    if (!unitIdParsed.valid) {
+      return res.status(400).json({
         error: 'الوحدة الدراسية مطلوبة',
-        code: 'UNIT_ID_REQUIRED' 
+        code: 'UNIT_ID_REQUIRED'
       });
     }
-
+    const unit_idNum = unitIdParsed.value;
     const trimmed = title.trim();
 
-    // Validation: Check for Arabic letters only
     const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicOnlyPattern.test(trimmed)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'عنوان الدرس يجب أن يحتوي على أحرف عربية فقط',
-        code: 'INVALID_CHARACTERS' 
+        code: 'INVALID_CHARACTERS'
       });
     }
 
-    // Verify unit exists
-    const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_id]);
+    const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_idNum]);
     if (!unitExists) {
       return res.status(404).json({ 
         error: 'الوحدة الدراسية غير موجودة',
@@ -150,22 +138,21 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check for duplicates within the same unit
     const existingLesson = await db.get(
       'SELECT id FROM lessons WHERE unit_id = ? AND title = ?',
-      [unit_id, trimmed]
+      [unit_idNum, trimmed]
     );
 
     if (existingLesson) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'هذا العنوان موجود بالفعل في هذه الوحدة. يرجى اختيار عنوان آخر',
-        code: 'DUPLICATE_LESSON_TITLE' 
+        code: 'DUPLICATE_LESSON_TITLE'
       });
     }
 
     const result = await db.run(
       'INSERT INTO lessons (title, unit_id, content) VALUES (?, ?, ?)',
-      [trimmed, unit_id, content || '']
+      [trimmed, unit_idNum, content || '']
     );
 
     // Insert videos if provided
@@ -194,16 +181,12 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     }
 
-    const newLesson = await db.get('SELECT * FROM lessons WHERE id = ?', [result.id]);
-    const lessonsVideos = await db.all(
-      'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
-      [result.id]
-    );
-    const lessonsImages = await db.all(
-      'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
-      [result.id]
-    );
-    res.status(201).json({ ...newLesson, videos: lessonsVideos, images: lessonsImages });
+    const [newLesson, lessonsVideos, lessonsImages] = await Promise.all([
+      db.get('SELECT * FROM lessons WHERE id = ?', [result.id]),
+      db.all('SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC', [result.id]),
+      db.all('SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC', [result.id])
+    ]);
+    res.status(201).json({ ...newLesson, videos: lessonsVideos || [], images: lessonsImages || [] });
   } catch (error) {
     console.error('Error creating lesson:', error);
     res.status(500).json({ error: 'Server error' });
@@ -213,10 +196,18 @@ router.post('/', authenticateToken, async (req, res) => {
 // ADMIN: Update lesson
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    const idParsed = parsePositiveInteger(req.params.id);
+    if (!idParsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+    const id = idParsed.value;
     const { title, unit_id, content, videos, images } = req.body;
-    const { id } = req.params;
+    const unitIdParsed = parsePositiveInteger(unit_id);
+    if (!unitIdParsed.valid) {
+      return res.status(400).json({ error: 'الوحدة الدراسية مطلوبة', code: 'UNIT_ID_REQUIRED' });
+    }
+    const unit_idNum = unitIdParsed.value;
 
-    // Validation: Check if title is empty
     if (!title || title.trim() === '') {
       return res.status(400).json({ 
         error: 'اسم الدرس مطلوب',
@@ -224,26 +215,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!unit_id) {
-      return res.status(400).json({ 
-        error: 'الوحدة الدراسية مطلوبة',
-        code: 'UNIT_ID_REQUIRED' 
-      });
-    }
-
     const trimmedTitle = title.trim();
 
-    // Validation: Check for Arabic letters only
     const arabicPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicPattern.test(trimmedTitle)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'يجب أن يحتوي على أحرف عربية فقط',
-        code: 'INVALID_CHARACTERS' 
+        code: 'INVALID_CHARACTERS'
       });
     }
 
-    // Verify unit exists
-    const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_id]);
+    const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_idNum]);
     if (!unitExists) {
       return res.status(404).json({ 
         error: 'الوحدة الدراسية غير موجودة',
@@ -251,10 +233,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check for duplicates within the same unit excluding current lesson
     const existingLesson = await db.get(
       'SELECT id FROM lessons WHERE unit_id = ? AND title = ? AND id != ?',
-      [unit_id, trimmedTitle, id]
+      [unit_idNum, trimmedTitle, id]
     );
 
     if (existingLesson) {
@@ -268,7 +249,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     try {
       result = await db.run(
         'UPDATE lessons SET title = ?, unit_id = ?, content = ? WHERE id = ?',
-        [trimmedTitle, unit_id, content || '', id]
+        [trimmedTitle, unit_idNum, content || '', id]
       );
     } catch (updateError) {
       console.error('[ERROR] Lesson update failed:', updateError.message);
@@ -335,29 +316,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    const updatedLesson = await db.get('SELECT * FROM lessons WHERE id = ?', [id]);
-    
-    // Fetch videos and images
-    let lessonsVideos = [];
-    let lessonsImages = [];
-    try {
-      lessonsVideos = await db.all(
-        'SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC',
-        [id]
-      ) || [];
-    } catch (e) {
-      // Videos table may not exist yet
-    }
-    try {
-      lessonsImages = await db.all(
-        'SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC',
-        [id]
-      ) || [];
-    } catch (e) {
-      // Images table may not exist yet
-    }
-    
-    res.json({ ...updatedLesson, videos: lessonsVideos, images: lessonsImages });
+    const [updatedLesson, lessonsVideos, lessonsImages] = await Promise.all([
+      db.get('SELECT * FROM lessons WHERE id = ?', [id]),
+      db.all('SELECT id, lesson_id, video_url, position, size, explanation FROM videos WHERE lesson_id = ? ORDER BY display_order ASC', [id]).catch(() => []),
+      db.all('SELECT id, lesson_id, image_path, position, size, caption FROM images WHERE lesson_id = ? ORDER BY display_order ASC', [id]).catch(() => [])
+    ]);
+    res.json({ ...updatedLesson, videos: lessonsVideos || [], images: lessonsImages || [] });
   } catch (error) {
     console.error('[ERROR] Lesson update failed:', error.message);
     res.status(500).json({ error: 'حدث خطأ في تحديث الدرس' });
@@ -409,8 +373,11 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
 // ADMIN: Delete lesson
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+    const id = parsed.value;
     const result = await db.run('DELETE FROM lessons WHERE id = ?', [id]);
 
     if (result.changes === 0) {
@@ -429,7 +396,11 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // PUBLIC: Get questions for a lesson (for students taking quiz)
 router.get('/:lessonId/questions', async (req, res) => {
   try {
-    const { lessonId } = req.params;
+    const parsed = parsePositiveInteger(req.params.lessonId);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+    const lessonId = parsed.value;
     const questions = await db.all(
       'SELECT id, lesson_id, question_text, option_a, option_b, option_c, option_d, display_order FROM questions WHERE lesson_id = ? ORDER BY display_order ASC',
       [lessonId]
@@ -445,15 +416,23 @@ router.get('/:lessonId/questions', async (req, res) => {
 // PUBLIC: Check answer for a question
 router.post('/:lessonId/questions/:questionId/check', async (req, res) => {
   try {
-    const { questionId } = req.params;
+    const lessonIdParsed = parsePositiveInteger(req.params.lessonId);
+    const questionIdParsed = parsePositiveInteger(req.params.questionId);
+    if (!lessonIdParsed.valid || !questionIdParsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson or question id' });
+    }
+    const questionId = questionIdParsed.value;
     const { answer } = req.body;
-    
+    if (answer === undefined || answer === null || String(answer).trim() === '') {
+      return res.status(400).json({ error: 'الإجابة مطلوبة' });
+    }
+
     const question = await db.get('SELECT correct_answer FROM questions WHERE id = ?', [questionId]);
     if (!question) {
       return res.status(404).json({ error: 'السؤال غير موجود' });
     }
-    
-    const isCorrect = answer.toUpperCase() === question.correct_answer.toUpperCase();
+
+    const isCorrect = String(answer).trim().toUpperCase() === question.correct_answer.toUpperCase();
     res.json({ 
       correct: isCorrect,
       correctAnswer: question.correct_answer
@@ -467,7 +446,11 @@ router.post('/:lessonId/questions/:questionId/check', async (req, res) => {
 // ADMIN: Get questions with answers (for editing)
 router.get('/:lessonId/questions/admin', authenticateToken, async (req, res) => {
   try {
-    const { lessonId } = req.params;
+    const parsed = parsePositiveInteger(req.params.lessonId);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+    const lessonId = parsed.value;
     const questions = await db.all(
       'SELECT * FROM questions WHERE lesson_id = ? ORDER BY display_order ASC',
       [lessonId]
@@ -482,7 +465,11 @@ router.get('/:lessonId/questions/admin', authenticateToken, async (req, res) => 
 // ADMIN: Add a question
 router.post('/:lessonId/questions', authenticateToken, async (req, res) => {
   try {
-    const { lessonId } = req.params;
+    const parsed = parsePositiveInteger(req.params.lessonId);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid lesson id' });
+    }
+    const lessonId = parsed.value;
     const { question_text, option_a, option_b, option_c, option_d, correct_answer } = req.body;
 
     // Validation
@@ -517,7 +504,11 @@ router.post('/:lessonId/questions', authenticateToken, async (req, res) => {
 // ADMIN: Update a question
 router.put('/:lessonId/questions/:questionId', authenticateToken, async (req, res) => {
   try {
-    const { questionId } = req.params;
+    const questionIdParsed = parsePositiveInteger(req.params.questionId);
+    if (!questionIdParsed.valid) {
+      return res.status(400).json({ error: 'Invalid question id' });
+    }
+    const questionId = questionIdParsed.value;
     const { question_text, option_a, option_b, option_c, option_d, correct_answer } = req.body;
 
     // Validation
@@ -549,8 +540,11 @@ router.put('/:lessonId/questions/:questionId', authenticateToken, async (req, re
 // ADMIN: Delete a question
 router.delete('/:lessonId/questions/:questionId', authenticateToken, async (req, res) => {
   try {
-    const { questionId } = req.params;
-
+    const parsed = parsePositiveInteger(req.params.questionId);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid question id' });
+    }
+    const questionId = parsed.value;
     const result = await db.run('DELETE FROM questions WHERE id = ?', [questionId]);
 
     if (result.changes === 0) {

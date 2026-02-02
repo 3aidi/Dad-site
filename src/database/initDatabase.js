@@ -123,8 +123,7 @@ async function initializeDatabase() {
       );
       console.log('✓ Default admin account created');
       console.log(`  Username: ${username}`);
-      console.log(`  Password: ${password}`);
-      console.log('  ⚠️  CHANGE THIS PASSWORD IN PRODUCTION!');
+      console.log('  ⚠️  Set ADMIN_PASSWORD in production and change default password.');
     } else {
       console.log('✓ Admin account already exists');
     }

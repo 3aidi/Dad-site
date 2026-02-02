@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database/database');
 const { authenticateToken } = require('../middleware/auth');
+const { parsePositiveInteger } = require('../utils/validation');
 
 const router = express.Router();
 
@@ -18,7 +19,11 @@ router.get('/', async (req, res) => {
 // PUBLIC: Get single class
 router.get('/:id', async (req, res) => {
   try {
-    const classItem = await db.get('SELECT * FROM classes WHERE id = ?', [req.params.id]);
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid class id' });
+    }
+    const classItem = await db.get('SELECT * FROM classes WHERE id = ?', [parsed.value]);
     
     if (!classItem) {
       return res.status(404).json({ error: 'Class not found' });
@@ -83,8 +88,12 @@ router.post('/', authenticateToken, async (req, res) => {
 // ADMIN: Update class
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid class id' });
+    }
+    const id = parsed.value;
     const { name } = req.body;
-    const { id } = req.params;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ 
@@ -137,8 +146,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // ADMIN: Delete class
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid class id' });
+    }
+    const id = parsed.value;
     const result = await db.run('DELETE FROM classes WHERE id = ?', [id]);
 
     if (result.changes === 0) {

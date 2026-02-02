@@ -39,17 +39,17 @@ class Database {
 
   async run(sql, params = []) {
     if (this.isPostgres) {
-      // Convert SQLite placeholders (?) to PostgreSQL ($1, $2, etc.)
       let pgSql = sql;
       let pgParams = params;
       let paramIndex = 1;
       pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
-      
+      const isInsert = /^\s*INSERT\s+INTO\s+/i.test(sql.trim()) && !/RETURNING\s+/i.test(sql);
+      if (isInsert) {
+        pgSql = pgSql.replace(/;\s*$/, '') + ' RETURNING id';
+      }
       const result = await this.db.query(pgSql, pgParams);
-      return { 
-        id: result.rows[0]?.id || result.rows.length, 
-        changes: result.rowCount 
-      };
+      const id = isInsert && result.rows && result.rows[0] ? result.rows[0].id : undefined;
+      return { id, changes: result.rowCount };
     } else {
       // SQLite
       return new Promise((resolve, reject) => {

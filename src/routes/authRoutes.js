@@ -14,8 +14,12 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    // Get admin from database
-    const admin = await db.get('SELECT * FROM admins WHERE username = ?', [username]);
+    const trimmedUsername = String(username).trim();
+    if (!trimmedUsername) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    const admin = await db.get('SELECT * FROM admins WHERE username = ?', [trimmedUsername]);
 
     if (!admin) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -85,8 +89,12 @@ router.get('/verify', async (req, res) => {
       }
     });
   } catch (error) {
-    // Clear invalid token
-    res.clearCookie('authToken');
+    res.clearCookie('authToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/'
+    });
     res.status(401).json({ authenticated: false });
   }
 });

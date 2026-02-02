@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
 
+const isProd = process.env.NODE_ENV === 'production';
+if (isProd && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production')) {
+  throw new Error('JWT_SECRET must be set in production');
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d';
 

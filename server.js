@@ -225,9 +225,13 @@ app.use('/api/classes', classRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/lessons', lessonRoutes);
 
+// Unmatched API paths must return 404 JSON, not HTML
+app.use('/api', (req, res, next) => {
+  res.status(404).json({ error: 'Resource not found' });
+});
+
 // Serve admin pages (protected on API level)
 app.get('/admin/*', (req, res) => {
-  // Set headers to prevent HTML caching
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -236,7 +240,6 @@ app.get('/admin/*', (req, res) => {
 
 // Serve public pages
 app.get('*', (req, res) => {
-  // Set headers to prevent HTML caching
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');

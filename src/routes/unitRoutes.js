@@ -1,15 +1,20 @@
 const express = require('express');
 const db = require('../database/database');
 const { authenticateToken } = require('../middleware/auth');
+const { parsePositiveInteger } = require('../utils/validation');
 
 const router = express.Router();
 
 // PUBLIC: Get units by class ID
 router.get('/class/:classId', async (req, res) => {
   try {
+    const parsed = parsePositiveInteger(req.params.classId);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid class id' });
+    }
     const units = await db.all(
       'SELECT * FROM units WHERE class_id = ? ORDER BY created_at ASC',
-      [req.params.classId]
+      [parsed.value]
     );
     res.json(units);
   } catch (error) {
@@ -21,7 +26,11 @@ router.get('/class/:classId', async (req, res) => {
 // PUBLIC: Get single unit
 router.get('/:id', async (req, res) => {
   try {
-    const unit = await db.get('SELECT * FROM units WHERE id = ?', [req.params.id]);
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid unit id' });
+    }
+    const unit = await db.get('SELECT * FROM units WHERE id = ?', [parsed.value]);
     
     if (!unit) {
       return res.status(404).json({ error: 'Unit not found' });
@@ -54,6 +63,11 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { title, class_id } = req.body;
+    const classIdParsed = parsePositiveInteger(class_id);
+    if (!classIdParsed.valid) {
+      return res.status(400).json({ error: 'الصف الدراسي مطلوب', code: 'CLASS_ID_REQUIRED' });
+    }
+    const class_idNum = classIdParsed.value;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ 
@@ -62,16 +76,8 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!class_id) {
-      return res.status(400).json({ 
-        error: 'الصف الدراسي مطلوب',
-        code: 'CLASS_ID_REQUIRED' 
-      });
-    }
-
     const trimmed = title.trim();
 
-    // Validation: Check for Arabic letters only
     const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicOnlyPattern.test(trimmed)) {
       return res.status(400).json({ 
@@ -80,8 +86,7 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // Verify class exists
-    const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_id]);
+    const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_idNum]);
     if (!classExists) {
       return res.status(404).json({ 
         error: 'الصف الدراسي غير موجود',
@@ -89,10 +94,9 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check for duplicates within the same class
     const existingUnit = await db.get(
       'SELECT id FROM units WHERE class_id = ? AND title = ?',
-      [class_id, trimmed]
+      [class_idNum, trimmed]
     );
 
     if (existingUnit) {
@@ -104,7 +108,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const result = await db.run(
       'INSERT INTO units (title, class_id) VALUES (?, ?)',
-      [trimmed, class_id]
+      [trimmed, class_idNum]
     );
 
     const newUnit = await db.get('SELECT * FROM units WHERE id = ?', [result.id]);
@@ -118,8 +122,17 @@ router.post('/', authenticateToken, async (req, res) => {
 // ADMIN: Update unit
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    const idParsed = parsePositiveInteger(req.params.id);
+    if (!idParsed.valid) {
+      return res.status(400).json({ error: 'Invalid unit id' });
+    }
+    const id = idParsed.value;
     const { title, class_id } = req.body;
-    const { id } = req.params;
+    const classIdParsed = parsePositiveInteger(class_id);
+    if (!classIdParsed.valid) {
+      return res.status(400).json({ error: 'الصف الدراسي مطلوب', code: 'CLASS_ID_REQUIRED' });
+    }
+    const class_idNum = classIdParsed.value;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ 
@@ -128,16 +141,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!class_id) {
-      return res.status(400).json({ 
-        error: 'الصف الدراسي مطلوب',
-        code: 'CLASS_ID_REQUIRED' 
-      });
-    }
-
     const trimmed = title.trim();
 
-    // Validation: Check for Arabic letters only
     const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicOnlyPattern.test(trimmed)) {
       return res.status(400).json({ 
@@ -146,8 +151,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Verify class exists
-    const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_id]);
+    const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_idNum]);
     if (!classExists) {
       return res.status(404).json({ 
         error: 'الصف الدراسي غير موجود',
@@ -155,10 +159,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check for duplicates within the same class excluding current unit
     const existingUnit = await db.get(
       'SELECT id FROM units WHERE class_id = ? AND title = ? AND id != ?',
-      [class_id, trimmed, id]
+      [class_idNum, trimmed, id]
     );
 
     if (existingUnit) {
@@ -170,7 +173,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     const result = await db.run(
       'UPDATE units SET title = ?, class_id = ? WHERE id = ?',
-      [trimmed, class_id, id]
+      [trimmed, class_idNum, id]
     );
 
     if (result.changes === 0) {
@@ -188,8 +191,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // ADMIN: Delete unit
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-
+    const parsed = parsePositiveInteger(req.params.id);
+    if (!parsed.valid) {
+      return res.status(400).json({ error: 'Invalid unit id' });
+    }
+    const id = parsed.value;
     const result = await db.run('DELETE FROM units WHERE id = ?', [id]);
 
     if (result.changes === 0) {

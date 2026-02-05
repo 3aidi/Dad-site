@@ -51,6 +51,8 @@ class AdminRouter {
       this.routes['/admin/units']?.();
     } else if (path === '/admin/lessons') {
       this.routes['/admin/lessons']?.();
+    } else if (path === '/admin/settings') {
+      this.routes['/admin/settings']?.();
     } else {
       this.navigate('/admin/dashboard');
     }
@@ -168,6 +170,14 @@ const router = new AdminRouter();
 // Block all button clicks globally
 const app = document.getElementById('admin-app');
 
+// Centralized identity: dynamic (from backend) with static fallback
+function getIdentity() {
+  if (window.APP_IDENTITY) {
+    return window.APP_IDENTITY;
+  }
+  return (window.APP_CONFIG && window.APP_CONFIG.IDENTITY) || {};
+}
+
 console.log('Admin app element:', app);
 console.log('Router initialized:', router);
 
@@ -225,6 +235,12 @@ function showConfirmModal(title, message) {
 
 // Admin Layout Template
 function adminLayout(content, activeNav) {
+  const identity = getIdentity();
+  const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+  const schoolName = identity.schoolName || '';
+  const adminName = identity.adminName || 'إدارة المدرسة';
+  const adminRole = identity.adminRole || 'مسؤول النظام التعليمي';
+
   return `
     <div class="admin-layout">
 <button type="button" class="hamburger" id="hamburgerBtn" data-action="toggle-sidebar">
@@ -238,9 +254,11 @@ function adminLayout(content, activeNav) {
           <div class="logo">
             <i class="fas fa-globe-asia"></i>
           </div>
-          <h2>الأستاذ سعد العايدي</h2>
-          <p>معلم دراسات اجتماعية</p>
-          <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.25rem;">مدرسة أبو فراس الحمداني للتعليم الأساسي</p>
+          <h2>${escapeHtml(adminName)}</h2>
+          <p>${escapeHtml(adminRole)}</p>
+          <p style="font-size: 0.8rem; color: var(--light-text); margin-top: 0.25rem;">
+            ${escapeHtml(schoolName)}
+          </p>
         </div>
         <nav>
 <a href="/admin/dashboard" class="${activeNav === 'dashboard' ? 'active' : ''}">
@@ -254,6 +272,9 @@ function adminLayout(content, activeNav) {
         </a>
         <a href="/admin/lessons" class="${activeNav === 'lessons' ? 'active' : ''}">
           <i class="fas fa-file-alt"></i> الدروس
+        </a>
+        <a href="/admin/settings" class="${activeNav === 'settings' ? 'active' : ''}">
+          <i class="fas fa-cog"></i> إعدادات المدرسة
         </a>
         </nav>
         <div class="sidebar-footer" dir="rtl">
@@ -303,13 +324,41 @@ router.on('/admin/login', async () => {
     return;
   }
   
+  let identity = getIdentity();
+
+  // Try to load dynamic identity settings (no auth required for GET)
+  try {
+    const dynamicIdentity = await adminApi.get('/api/settings/identity');
+    if (dynamicIdentity) {
+      window.APP_IDENTITY = dynamicIdentity;
+      identity = dynamicIdentity;
+    }
+  } catch (_) {
+    // Ignore and keep fallback identity
+  }
+
+  const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+  const schoolName = identity.schoolName || '';
+  const platformFullTitle = schoolName
+    ? `${platformLabel} - ${schoolName}`
+    : platformLabel;
+
+  // Set admin document title based on identity
+  document.title = `لوحة التحكم - ${platformFullTitle}`;
+
   app.innerHTML = `
     <div class="login-container">
-      <div class="teacher-name-bg">سعد عبد الفتاح العايدي</div>
+      <div class="teacher-name-bg">${escapeHtml(platformFullTitle)}</div>
       <div class="login-form-wrapper">
         <div class="container">
           <div class="heading">تسجيل الدخول</div>
-          <p class="welcome-text">معلم دراسات اجتماعية - مدرسة أبو فراس الحمداني</p>
+          <p class="welcome-text">
+            ${escapeHtml(
+              schoolName
+                ? `نظام إدارة المحتوى التعليمي لـ ${schoolName}`
+                : 'نظام إدارة المحتوى التعليمي للمدرسة'
+            )}
+          </p>
             <form id="login-form" class="form">
               <input required class="input" type="text" name="username" id="username" placeholder="اسم المستخدم" />
               <input required class="input" type="password" name="password" id="password" placeholder="كلمة المرور" />
@@ -359,6 +408,21 @@ router.on('/admin/login', async () => {
 // Dashboard
 router.on('/admin/dashboard', async () => {
   try {
+    // Ensure latest identity is loaded for sidebar/header and document title
+    try {
+      const dynamicIdentity = await adminApi.get('/api/settings/identity');
+      if (dynamicIdentity) {
+        window.APP_IDENTITY = dynamicIdentity;
+      }
+    } catch (_) {}
+    const identity = getIdentity();
+    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+    const schoolName = identity.schoolName || '';
+    const platformFullTitle = schoolName
+      ? `${platformLabel} - ${schoolName}`
+      : platformLabel;
+    document.title = `لوحة المعلومات - ${platformFullTitle}`;
+
     const [classes, units, lessons] = await Promise.all([
       adminApi.get('/api/classes'),
       adminApi.get('/api/units'),
@@ -403,6 +467,14 @@ router.on('/admin/dashboard', async () => {
 // Classes Management
 router.on('/admin/classes', async () => {
   try {
+    const identity = getIdentity();
+    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+    const schoolName = identity.schoolName || '';
+    const platformFullTitle = schoolName
+      ? `${platformLabel} - ${schoolName}`
+      : platformLabel;
+    document.title = `الصفوف الدراسية - ${platformFullTitle}`;
+
     const classes = await adminApi.get('/api/classes');
 
     const classesHTML = classes.length === 0 
@@ -611,6 +683,14 @@ window.deleteClass = async function(id, name) {
 // Units Management
 router.on('/admin/units', async () => {
   try {
+    const identity = getIdentity();
+    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+    const schoolName = identity.schoolName || '';
+    const platformFullTitle = schoolName
+      ? `${platformLabel} - ${schoolName}`
+      : platformLabel;
+    document.title = `الوحدات الدراسية - ${platformFullTitle}`;
+
     const [units, classes] = await Promise.all([
       adminApi.get('/api/units'),
       adminApi.get('/api/classes')
@@ -889,6 +969,14 @@ window.deleteUnit = async function(id, title) {
 // Lessons Management
 router.on('/admin/lessons', async () => {
   try {
+    const identity = getIdentity();
+    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+    const schoolName = identity.schoolName || '';
+    const platformFullTitle = schoolName
+      ? `${platformLabel} - ${schoolName}`
+      : platformLabel;
+    document.title = `إدارة الدروس - ${platformFullTitle}`;
+
     const [lessons, units] = await Promise.all([
       adminApi.get('/api/lessons'),
       adminApi.get('/api/units')
@@ -943,6 +1031,141 @@ router.on('/admin/lessons', async () => {
     `, 'lessons');
   } catch (error) {
     app.innerHTML = adminLayout(`<div class="alert alert-error">Error loading lessons</div>`, 'lessons');
+  }
+});
+
+// School / identity settings management
+router.on('/admin/settings', async () => {
+  try {
+    // Load current identity from backend
+    let identity;
+    try {
+      identity = await adminApi.get('/api/settings/identity');
+      if (identity) {
+        window.APP_IDENTITY = identity;
+      }
+    } catch (_) {
+      identity = getIdentity();
+    }
+
+    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+    const schoolName = identity.schoolName || '';
+    const platformFullTitle = schoolName
+      ? `${platformLabel} - ${schoolName}`
+      : platformLabel;
+    document.title = `إعدادات المدرسة - ${platformFullTitle}`;
+
+    app.innerHTML = adminLayout(
+      `
+      <div class="admin-header">
+        <h1>إعدادات هوية المدرسة</h1>
+        <p>تحديث اسم المدرسة وطريقة ظهور النظام التعليمي للطلاب</p>
+      </div>
+      <div class="admin-content">
+        <form id="school-identity-form" class="admin-form">
+          <div class="form-group">
+            <label for="school-name"><i class="fas fa-school"></i> اسم المدرسة *</label>
+            <input type="text" id="school-name" required value="${escapeHtml(
+              identity.schoolName || ''
+            )}" dir="rtl" />
+            <small style="color: #64748b;">
+              مثال: مدرسة أبو فراس الحمداني للتعليم الأساسي
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="platform-label"><i class="fas fa-globe-asia"></i> اسم المنصة *</label>
+            <input type="text" id="platform-label" required value="${escapeHtml(
+              identity.platformLabel || 'المنصة التعليمية'
+            )}" dir="rtl" />
+            <small style="color: #64748b;">
+              يظهر قبل اسم المدرسة في العناوين، مثل: المنصة التعليمية - اسم المدرسة
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="admin-name"><i class="fas fa-users-cog"></i> جهة الإدارة المعروضة *</label>
+            <input type="text" id="admin-name" required value="${escapeHtml(
+              identity.adminName || 'إدارة المدرسة'
+            )}" dir="rtl" />
+            <small style="color: #64748b;">
+              يفضّل استخدام صياغة مؤسسية مثل: إدارة المدرسة / شؤون الطلاب، وليس اسم شخص.
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="admin-role"><i class="fas fa-id-badge"></i> وصف جهة الإدارة *</label>
+            <input type="text" id="admin-role" required value="${escapeHtml(
+              identity.adminRole || 'مسؤول النظام التعليمي'
+            )}" dir="rtl" />
+            <small style="color: #64748b;">
+              يظهر كتوضيح لدور الإدارة، مثل: مسؤول النظام التعليمي.
+            </small>
+          </div>
+
+          <div class="alert alert-info" style="margin-top: 1rem;">
+            <i class="fas fa-info-circle"></i>
+            يتم استخدام هذه البيانات في واجهة الطلاب ولوحة التحكم لتظهر المنصة كمنظومة مدرسية رسمية.
+          </div>
+
+          <div id="settings-error" class="alert alert-error" style="display: none; margin-top: 1rem;"></div>
+
+          <div class="btn-group">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> حفظ الإعدادات
+            </button>
+          </div>
+        </form>
+      </div>
+    `,
+      'settings'
+    );
+
+    const form = document.getElementById('school-identity-form');
+    const errorDiv = document.getElementById('settings-error');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const schoolNameInput = document.getElementById('school-name').value.trim();
+      const platformLabelInput = document.getElementById('platform-label').value.trim();
+      const adminNameInput = document.getElementById('admin-name').value.trim();
+      const adminRoleInput = document.getElementById('admin-role').value.trim();
+
+      if (!schoolNameInput || !platformLabelInput || !adminNameInput || !adminRoleInput) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'جميع الحقول مطلوبة';
+        return;
+      }
+
+      try {
+        const updated = await adminApi.put('/api/settings/identity', {
+          schoolName: schoolNameInput,
+          platformLabel: platformLabelInput,
+          adminName: adminNameInput,
+          adminRole: adminRoleInput,
+        });
+
+        // Cache updated identity globally so layout uses it immediately
+        if (updated) {
+          window.APP_IDENTITY = updated;
+        }
+
+        showAlert('تم تحديث إعدادات المدرسة بنجاح!');
+        // Re-render settings page so header/sidebar reflect new identity
+        router.navigate('/admin/settings');
+      } catch (error) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = error.message || 'فشل تحديث الإعدادات';
+      }
+    });
+  } catch (error) {
+    app.innerHTML = adminLayout(
+      `<div class="alert alert-error">فشل تحميل إعدادات المدرسة</div>`,
+      'settings'
+    );
   }
 });
 

@@ -11,6 +11,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const classRoutes = require('./src/routes/classRoutes');
 const unitRoutes = require('./src/routes/unitRoutes');
 const lessonRoutes = require('./src/routes/lessonRoutes');
+const settingsRoutes = require('./src/routes/settingsRoutes');
 const db = require('./src/database/database');
 
 const app = express();
@@ -224,6 +225,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/lessons', lessonRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Unmatched API paths must return 404 JSON, not HTML
 app.use('/api', (req, res, next) => {

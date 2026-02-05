@@ -105,6 +105,94 @@ const api = {
 const router = new Router();
 const app = document.getElementById('app');
 
+// Apply centralized school identity to public layout
+(async function applyPublicIdentity() {
+  try {
+    let identity = null;
+
+    // Prefer dynamic settings from backend
+    try {
+      const response = await fetch('/api/settings/identity');
+      if (response.ok) {
+        identity = await response.json();
+      }
+    } catch (_) {
+      // Ignore network errors and fall back to static config
+    }
+
+    // Fallback to static config if API not available
+    if (!identity || !identity.schoolName) {
+      identity = (window.APP_CONFIG && window.APP_CONFIG.IDENTITY) || {};
+    }
+
+    if (!identity || !identity.schoolName) return;
+
+    const schoolName = identity.schoolName;
+    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
+    const adminName = identity.adminName || 'إدارة المدرسة';
+    const adminRole = identity.adminRole || 'مسؤول النظام التعليمي';
+    const platformFullTitle = `${platformLabel} - ${schoolName}`;
+
+    // Document title (metadata)
+    document.title = platformFullTitle;
+
+    // Helper to set text safely
+    const setText = (selector, value) => {
+      const el = document.querySelector(selector);
+      if (el && value) el.textContent = value;
+    };
+
+    // Header
+    setText('[data-identity="platform-title"]', platformFullTitle);
+    setText(
+      '[data-identity="platform-subtitle"]',
+      `منصة تعليمية لخدمة طلاب ${schoolName}`
+    );
+
+    // Sidebar
+    setText(
+      '[data-identity="sidebar-platform-title"]',
+      platformLabel
+    );
+    setText(
+      '[data-identity="sidebar-admin-label"]',
+      adminName
+    );
+    setText(
+      '[data-identity="sidebar-school-name"]',
+      schoolName
+    );
+
+    // Footer
+    setText(
+      '[data-identity="footer-admin-name"]',
+      adminName
+    );
+    setText(
+      '[data-identity="footer-admin-role"]',
+      adminRole
+    );
+    setText(
+      '[data-identity="footer-school-name"]',
+      schoolName
+    );
+
+    const year =
+      identity.copyrightYear ||
+      (window.APP_CONFIG &&
+        window.APP_CONFIG.IDENTITY &&
+        window.APP_CONFIG.IDENTITY.copyrightYear) ||
+      new Date().getFullYear();
+
+    setText(
+      '[data-identity="footer-copy"]',
+      `© ${year} جميع الحقوق محفوظة - ${schoolName}`
+    );
+  } catch (e) {
+    // Fail silently; identity is not critical for functionality
+  }
+})();
+
 // Home Page - Show all classes with their units grouped
 router.on('/', async () => {
   try {

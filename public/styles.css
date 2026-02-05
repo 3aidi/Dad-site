@@ -75,7 +75,8 @@ button::before {
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-  animation: shimmer 0.5s infinite;
+  /* Slow down the shiny shimmer effect */
+  animation: shimmer 1.8s infinite;
 }
 
 .btn:hover,

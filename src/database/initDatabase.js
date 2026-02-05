@@ -30,6 +30,34 @@ async function initializeDatabase() {
     }
     console.log('✓ Admin table created');
 
+    // Create identity/settings table for school-wide identity
+    if (isPostgres) {
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS identity_settings (
+          id SERIAL PRIMARY KEY,
+          school_name TEXT NOT NULL,
+          platform_label TEXT NOT NULL,
+          admin_name TEXT NOT NULL,
+          admin_role TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } else {
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS identity_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          school_name TEXT NOT NULL,
+          platform_label TEXT NOT NULL,
+          admin_name TEXT NOT NULL,
+          admin_role TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    }
+    console.log('✓ Identity settings table created');
+
     // Create Classes table
     if (isPostgres) {
       await db.run(`
@@ -126,6 +154,23 @@ async function initializeDatabase() {
       console.log('  ⚠️  Set ADMIN_PASSWORD in production and change default password.');
     } else {
       console.log('✓ Admin account already exists');
+    }
+
+    // Ensure there is at least one identity settings row
+    const existingIdentity = await db.get('SELECT * FROM identity_settings LIMIT 1');
+    if (!existingIdentity) {
+      const defaultSchoolName = 'مدرسة أبو فراس الحمداني للتعليم الأساسي';
+      const defaultPlatformLabel = 'المنصة التعليمية';
+      const defaultAdminName = 'إدارة المدرسة';
+      const defaultAdminRole = 'مسؤول النظام التعليمي';
+
+      await db.run(
+        'INSERT INTO identity_settings (school_name, platform_label, admin_name, admin_role) VALUES (?, ?, ?, ?)',
+        [defaultSchoolName, defaultPlatformLabel, defaultAdminName, defaultAdminRole]
+      );
+      console.log('✓ Default identity settings created');
+    } else {
+      console.log('✓ Identity settings already exist');
     }
 
     console.log('\n✓ Database initialization complete!');

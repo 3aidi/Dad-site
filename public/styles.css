@@ -16,6 +16,12 @@
   --shadow-xl: 0 20px 60px rgba(30, 58, 138, 0.15);
   --gradient-primary: linear-gradient(135deg, #1e3a8a 0%, #0891b2 100%);
   --gradient-accent: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
+  --accent-gold: #ffd700;
+  --gradient-blue: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  --gradient-success: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --gradient-danger: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  --gradient-info: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+  --gradient-secondary: linear-gradient(135deg, #1e3a8a 0%, #0891b2 100%);
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -32,6 +38,7 @@ html {
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* text-size-adjust added for better browser compatibility */
 }
 
 body {
@@ -418,7 +425,7 @@ nav a.active {
   z-index: 1;
   background: transparent;
   border: none;
-  min-height: auto;
+  /* min-height: auto; removed for Firefox compatibility */
   box-shadow: none;
 }
 
@@ -2290,6 +2297,7 @@ footer::before {
   margin-bottom: 0.75rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

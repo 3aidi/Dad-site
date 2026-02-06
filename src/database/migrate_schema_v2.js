@@ -24,11 +24,13 @@ async function migrate() {
             await runSafe('ALTER TABLE classes ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0', 'Add display_order to classes');
             await runSafe('ALTER TABLE units ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0', 'Add display_order to units');
             await runSafe("ALTER TABLE units ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'P'", 'Add category to units');
+            await runSafe("ALTER TABLE units ADD COLUMN IF NOT EXISTS term TEXT DEFAULT '1'", 'Add term to units');
         } else {
             // SQLite
             await runSafe('ALTER TABLE classes ADD COLUMN display_order INTEGER DEFAULT 0', 'Add display_order to classes');
             await runSafe('ALTER TABLE units ADD COLUMN display_order INTEGER DEFAULT 0', 'Add display_order to units');
             await runSafe("ALTER TABLE units ADD COLUMN category TEXT DEFAULT 'P'", 'Add category to units');
+            await runSafe("ALTER TABLE units ADD COLUMN term TEXT DEFAULT '1'", 'Add term to units');
         }
         console.log('Migration finished.');
         process.exit(0);

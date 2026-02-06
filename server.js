@@ -36,9 +36,17 @@ async function ensureTablesExist() {
   try {
     const isPostgres = process.env.DATABASE_URL && process.env.NODE_ENV === 'production';
 
-    // Create videos table if not exists
+    // Create videos table if not exists with try-catch for robustness
+    const runSafe = async (sql, desc) => {
+      try {
+        await db.run(sql);
+      } catch (e) {
+        if (!isProd) console.log(`Note: Table setup info for "${desc}": ${e.message}`);
+      }
+    };
+
     if (isPostgres) {
-      await db.run(`
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS videos (
           id SERIAL PRIMARY KEY,
           lesson_id INTEGER NOT NULL,
@@ -49,8 +57,8 @@ async function ensureTablesExist() {
           display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `);
-      await db.run(`
+      `, 'videos');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS images (
           id SERIAL PRIMARY KEY,
           lesson_id INTEGER NOT NULL,
@@ -61,8 +69,8 @@ async function ensureTablesExist() {
           display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `);
-      await db.run(`
+      `, 'images');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS questions (
           id SERIAL PRIMARY KEY,
           lesson_id INTEGER NOT NULL,
@@ -75,9 +83,9 @@ async function ensureTablesExist() {
           display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, 'questions');
     } else {
-      await db.run(`
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS videos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           lesson_id INTEGER NOT NULL,
@@ -89,8 +97,8 @@ async function ensureTablesExist() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
         )
-      `);
-      await db.run(`
+      `, 'videos');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS images (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           lesson_id INTEGER NOT NULL,
@@ -102,8 +110,8 @@ async function ensureTablesExist() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
         )
-      `);
-      await db.run(`
+      `, 'images');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS questions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           lesson_id INTEGER NOT NULL,
@@ -117,7 +125,7 @@ async function ensureTablesExist() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
         )
-      `);
+      `, 'questions');
     }
     console.log('✓ Database tables verified');
 

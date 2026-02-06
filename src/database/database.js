@@ -22,7 +22,7 @@ class Database {
       // SQLite connection
       const sqlite3 = require('sqlite3').verbose();
       const dbPath = path.join(__dirname, '../../database.db');
-      
+
       return new Promise((resolve, reject) => {
         this.db = new sqlite3.Database(dbPath, (err) => {
           if (err) {
@@ -39,21 +39,37 @@ class Database {
 
   async run(sql, params = []) {
     if (this.isPostgres) {
+      if (!this.db) {
+        throw new Error('Database not connected');
+      }
       let pgSql = sql;
       let pgParams = params;
       let paramIndex = 1;
+
+      // Better replacement of ? with $n placeholders
+      // Note: This is still simple, but handles the basics of our app
       pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+
       const isInsert = /^\s*INSERT\s+INTO\s+/i.test(sql.trim()) && !/RETURNING\s+/i.test(sql);
       if (isInsert) {
         pgSql = pgSql.replace(/;\s*$/, '') + ' RETURNING id';
       }
-      const result = await this.db.query(pgSql, pgParams);
-      const id = isInsert && result.rows && result.rows[0] ? result.rows[0].id : undefined;
-      return { id, changes: result.rowCount };
+
+      try {
+        const result = await this.db.query(pgSql, pgParams);
+        const id = (isInsert && result.rows && result.rows[0]) ? result.rows[0].id : undefined;
+        return { id, changes: result.rowCount };
+      } catch (error) {
+        console.error('PostgreSQL Run Error:', { sql: pgSql, params: pgParams, error: error.message });
+        throw error;
+      }
     } else {
       // SQLite
+      if (!this.db) {
+        throw new Error('Database not connected');
+      }
       return new Promise((resolve, reject) => {
-        this.db.run(sql, params, function(err) {
+        this.db.run(sql, params, function (err) {
           if (err) {
             reject(err);
           } else {
@@ -66,13 +82,20 @@ class Database {
 
   async get(sql, params = []) {
     if (this.isPostgres) {
+      if (!this.db) throw new Error('Database not connected');
       let pgSql = sql;
       let paramIndex = 1;
       pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
-      
-      const result = await this.db.query(pgSql, params);
-      return result.rows[0];
+
+      try {
+        const result = await this.db.query(pgSql, params);
+        return result.rows[0];
+      } catch (error) {
+        console.error('PostgreSQL Get Error:', { sql: pgSql, params, error: error.message });
+        throw error;
+      }
     } else {
+      if (!this.db) throw new Error('Database not connected');
       return new Promise((resolve, reject) => {
         this.db.get(sql, params, (err, row) => {
           if (err) {
@@ -87,13 +110,20 @@ class Database {
 
   async all(sql, params = []) {
     if (this.isPostgres) {
+      if (!this.db) throw new Error('Database not connected');
       let pgSql = sql;
       let paramIndex = 1;
       pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
-      
-      const result = await this.db.query(pgSql, params);
-      return result.rows;
+
+      try {
+        const result = await this.db.query(pgSql, params);
+        return result.rows;
+      } catch (error) {
+        console.error('PostgreSQL All Error:', { sql: pgSql, params, error: error.message });
+        throw error;
+      }
     } else {
+      if (!this.db) throw new Error('Database not connected');
       return new Promise((resolve, reject) => {
         this.db.all(sql, params, (err, rows) => {
           if (err) {

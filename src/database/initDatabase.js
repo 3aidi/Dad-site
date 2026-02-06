@@ -149,9 +149,17 @@ async function initializeDatabase() {
     // MIGRATION: Ensure new columns exist even if tables existed
     try {
       if (isPostgres) {
-        await db.run('ALTER TABLE classes ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0');
-        await db.run('ALTER TABLE units ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0');
-        await db.run("ALTER TABLE units ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'P'");
+        const safeAlter = async (sql, desc) => {
+          try {
+            await db.run(sql);
+          } catch (e) {
+            console.log(`Note: Postgres migration skipped for "${desc}": ${e.message}`);
+          }
+        };
+        await safeAlter('ALTER TABLE classes ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0', 'display_order to classes');
+        await safeAlter('ALTER TABLE units ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0', 'display_order to units');
+        await safeAlter("ALTER TABLE units ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'P'", 'category to units');
+        await safeAlter("ALTER TABLE units ADD COLUMN IF NOT EXISTS term TEXT DEFAULT '1'", 'term to units');
       } else {
         // SQLite: Try adding columns, ignore if they exist
         const safeAlter = async (sql) => {

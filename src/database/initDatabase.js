@@ -89,6 +89,7 @@ async function initializeDatabase() {
           title TEXT NOT NULL,
           category TEXT DEFAULT 'P',
           display_order INTEGER DEFAULT 0,
+          term TEXT DEFAULT '1',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
         )
@@ -101,6 +102,7 @@ async function initializeDatabase() {
           title TEXT NOT NULL,
           category TEXT DEFAULT 'P',
           display_order INTEGER DEFAULT 0,
+          term TEXT DEFAULT '1',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
         )
@@ -158,6 +160,7 @@ async function initializeDatabase() {
         await safeAlter('ALTER TABLE classes ADD COLUMN display_order INTEGER DEFAULT 0');
         await safeAlter('ALTER TABLE units ADD COLUMN display_order INTEGER DEFAULT 0');
         await safeAlter("ALTER TABLE units ADD COLUMN category TEXT DEFAULT 'P'");
+        await safeAlter("ALTER TABLE units ADD COLUMN term TEXT DEFAULT '1'");
       }
       console.log('✓ Schema migration verified');
     } catch (err) {

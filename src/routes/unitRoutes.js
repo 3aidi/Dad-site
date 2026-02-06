@@ -95,20 +95,21 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     const existingUnit = await db.get(
-      'SELECT id FROM units WHERE class_id = ? AND title = ?',
-      [class_idNum, trimmed]
+      'SELECT id FROM units WHERE class_id = ? AND title = ? AND term = ?',
+      [class_idNum, trimmed, String(req.body.term || '1')]
     );
 
     if (existingUnit) {
+      const termName = (req.body.term || '1') == '1' ? 'الفصل الدراسي الأول' : 'الفصل الدراسي الثاني';
       return res.status(409).json({
-        error: 'هذا العنوان موجود بالفعل في هذا الصف. يرجى اختيار عنوان آخر',
+        error: `هذا العنوان موجود بالفعل في ${termName} لهذا الصف.`,
         code: 'DUPLICATE_UNIT_TITLE'
       });
     }
 
     const result = await db.run(
-      'INSERT INTO units (title, class_id, category) VALUES (?, ?, ?)',
-      [trimmed, class_idNum, req.body.category === 'Z' ? 'Z' : 'P']
+      'INSERT INTO units (title, class_id, category, term) VALUES (?, ?, ?, ?)',
+      [trimmed, class_idNum, req.body.category === 'Z' ? 'Z' : 'P', req.body.term || '1']
     );
 
     const newUnit = await db.get('SELECT * FROM units WHERE id = ?', [result.id]);
@@ -159,14 +160,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    const validTerm = req.body.term || '1';
+
     const existingUnit = await db.get(
-      'SELECT id FROM units WHERE class_id = ? AND title = ? AND id != ?',
-      [class_idNum, trimmed, id]
+      'SELECT id FROM units WHERE class_id = ? AND title = ? AND term = ? AND id != ?',
+      [class_idNum, trimmed, validTerm, id]
     );
 
     if (existingUnit) {
+      const termName = validTerm == '1' ? 'الفصل الدراسي الأول' : 'الفصل الدراسي الثاني';
       return res.status(409).json({
-        error: 'هذا العنوان موجود بالفعل في هذا الصف. يرجى اختيار عنوان آخر',
+        error: `هذا العنوان موجود بالفعل في ${termName} لهذا الصف.`,
         code: 'DUPLICATE_UNIT_TITLE'
       });
     }
@@ -174,8 +178,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const validCategory = category === 'Z' ? 'Z' : 'P';
 
     const result = await db.run(
-      'UPDATE units SET title = ?, class_id = ?, category = ? WHERE id = ?',
-      [trimmed, class_idNum, validCategory, id]
+      'UPDATE units SET title = ?, class_id = ?, category = ?, term = ? WHERE id = ?',
+      [trimmed, class_idNum, validCategory, validTerm, id]
     );
 
     if (result.changes === 0) {

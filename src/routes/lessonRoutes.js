@@ -87,11 +87,11 @@ router.get('/:id', async (req, res) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const lessons = await db.all(`
-      SELECT l.*, u.title as unit_title, c.name as class_name 
+      SELECT l.*, u.title as unit_title, u.term, u.class_id, c.name as class_name 
       FROM lessons l 
       JOIN units u ON l.unit_id = u.id 
       JOIN classes c ON u.class_id = c.id 
-      ORDER BY l.created_at DESC
+      ORDER BY c.display_order ASC, u.display_order ASC, l.created_at DESC
     `);
     res.json(lessons);
   } catch (error) {
@@ -106,9 +106,9 @@ router.post('/', authenticateToken, async (req, res) => {
     const { title, unit_id, content, videos, images } = req.body;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'عنوان الدرس مطلوب',
-        code: 'TITLE_REQUIRED' 
+        code: 'TITLE_REQUIRED'
       });
     }
 
@@ -132,9 +132,9 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_idNum]);
     if (!unitExists) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'الوحدة الدراسية غير موجودة',
-        code: 'UNIT_NOT_FOUND' 
+        code: 'UNIT_NOT_FOUND'
       });
     }
 
@@ -209,9 +209,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const unit_idNum = unitIdParsed.value;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'اسم الدرس مطلوب',
-        code: 'TITLE_REQUIRED' 
+        code: 'TITLE_REQUIRED'
       });
     }
 
@@ -227,9 +227,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     const unitExists = await db.get('SELECT id FROM units WHERE id = ?', [unit_idNum]);
     if (!unitExists) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'الوحدة الدراسية غير موجودة',
-        code: 'UNIT_NOT_FOUND' 
+        code: 'UNIT_NOT_FOUND'
       });
     }
 
@@ -239,9 +239,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     );
 
     if (existingLesson) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'هذا الاسم موجود بالفعل',
-        code: 'DUPLICATE_LESSON_TITLE' 
+        code: 'DUPLICATE_LESSON_TITLE'
       });
     }
 
@@ -273,7 +273,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
             console.warn('Could not delete old videos:', delErr.message);
           }
         }
-        
+
         // Insert new videos
         for (let i = 0; i < videos.length; i++) {
           const v = videos[i];
@@ -300,7 +300,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
             console.warn('Could not delete old images:', delErr.message);
           }
         }
-        
+
         // Insert new images
         for (let i = 0; i < images.length; i++) {
           const img = images[i];
@@ -355,7 +355,7 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
           resolve(result);
         }
       );
-      
+
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     });
 
@@ -363,7 +363,7 @@ router.post('/upload-image', authenticateToken, upload.single('image'), async (r
     res.json({ imagePath: result.secure_url });
   } catch (error) {
     console.error('[ERROR] Image upload failed:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'فشل تحميل الصورة',
       code: 'UPLOAD_ERROR'
     });
@@ -433,7 +433,7 @@ router.post('/:lessonId/questions/:questionId/check', async (req, res) => {
     }
 
     const isCorrect = String(answer).trim().toUpperCase() === question.correct_answer.toUpperCase();
-    res.json({ 
+    res.json({
       correct: isCorrect,
       correctAnswer: question.correct_answer
     });

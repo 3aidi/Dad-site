@@ -1,16 +1,43 @@
-// If user landed on /admin or /admin/ while public app loaded, send to admin login
+// Premium Student Platform - core logic
 (function () {
-  var path = window.location.pathname.replace(/\/$/, '') || '/';
-  if (path === '/admin') {
-    window.location.replace('/admin/login');
-  }
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  if (path === '/admin') window.location.replace('/admin/login');
 })();
 
-// Router
-class Router {
+/**
+ * UTILS & HELPERS
+ */
+const escapeHtml = (unsafe) => {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+const extractYouTubeId = (url) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
+const estimateReadTime = (content) => {
+  if (!content) return 0;
+  const wordsPerMinute = 200;
+  const wordCount = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+};
+
+/**
+ * ROUTER
+ */
+class AppRouter {
   constructor() {
     this.routes = {};
     this.currentPath = '';
+    window.addEventListener('popstate', () => this.handleRoute());
   }
 
   on(path, handler) {
@@ -18,6 +45,7 @@ class Router {
   }
 
   navigate(path) {
+    if (window.location.pathname === path) return;
     window.history.pushState({}, '', path);
     this.handleRoute();
   }
@@ -26,884 +54,329 @@ class Router {
     const path = window.location.pathname;
     this.currentPath = path;
 
-    // Update active nav
-    this.updateActiveNav();
-
-    // Match routes
-    if (path === '/' || path === '') {
-      this.routes['/']?.();
-    } else if (path === '/classes') {
-      this.routes['/classes']?.();
-    } else if (path.startsWith('/class/')) {
-      const classId = path.split('/')[2];
-      this.routes['/class/:id']?.(classId);
-    } else if (path.startsWith('/unit/')) {
-      const unitId = path.split('/')[2];
-      this.routes['/unit/:id']?.(unitId);
-    } else if (path.startsWith('/lesson/')) {
-      const lessonId = path.split('/')[2];
-      this.routes['/lesson/:id']?.(lessonId);
-    } else {
-      this.showError('الصفحة غير موجودة');
-    }
-  }
-
-  updateActiveNav() {
-    const navLinks = document.querySelectorAll('nav a');
-    navLinks.forEach(link => {
-      link.classList.remove('active');
-      const href = link.getAttribute('href');
-      if (href === this.currentPath || (href === '/classes' && this.currentPath.startsWith('/class'))) {
-        link.classList.add('active');
-      }
+    // Update Sidebar Activations
+    document.querySelectorAll('[data-navigate]').forEach(el => {
+      const target = el.getAttribute('data-navigate');
+      if (target === '/' && path === '/') el.classList.add('active');
+      else if (target !== '/' && path.startsWith(target)) el.classList.add('active');
+      else el.classList.remove('active');
     });
+
+    if (path === '/' || path === '') this.routes['/']?.();
+    else if (path === '/classes') this.routes['/classes']?.();
+    else if (path.startsWith('/class/')) this.routes['/class/:id']?.(path.split('/')[2]);
+    else if (path.startsWith('/unit/')) this.routes['/unit/:id']?.(path.split('/')[2]);
+    else if (path.startsWith('/lesson/')) this.routes['/lesson/:id']?.(path.split('/')[2]);
+    else this.renderError('الصفحة غير موجودة');
+
+    // Smooth scroll to top on navigate
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  showError(message) {
+  renderError(msg) {
     const app = document.getElementById('app');
-    if (app) {
-      app.innerHTML = `
-        <div class="error">
-          <i class="fas fa-exclamation-triangle"></i>
-          <h3>خطأ</h3>
-          <p>${message}</p>
-          <button type="button" class="btn" data-action="go-home">العودة للرئيسية</button>
-        </div>
-      `;
-    }
+    app.innerHTML = `
+      <div class="animate-up" style="text-align: center; padding: 4rem;">
+        <i class="fas fa-triangle-exclamation" style="font-size: 4rem; color: var(--accent-rose); margin-bottom: 2rem;"></i>
+        <h2>عذراً، حدث خطأ</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">${msg}</p>
+        <button class="nav-item active" style="margin: 0 auto; border: none; cursor: pointer;" onclick="router.navigate('/')">العودة للرئيسية</button>
+      </div>
+    `;
   }
 }
 
-// Optimized API Helper with timeout and error handling
 const api = {
-  async get(url, timeout = 10000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
+  async get(url) {
     try {
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'خطأ في السيرفر' }));
-        const errorMsg = errorData.error || `خطأ HTTP ${response.status}`;
-        throw new Error(errorMsg);
-      }
-      return response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('انتهت مهلة الاتصال');
-      }
-      console.error('API Error:', url, error.message);
-      throw error;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('فشل في جلب البيانات');
+      return await res.json();
+    } catch (e) {
+      console.error(e);
+      throw e;
     }
   }
 };
 
-// Initialize router
-const router = new Router();
+const router = new AppRouter();
 const app = document.getElementById('app');
 
-// Apply centralized school identity to public layout
-(async function applyPublicIdentity() {
-  try {
-    let identity = null;
+/**
+ * SIDEBAR LOGIC
+ */
+const setupSidebar = () => {
+  const toggle = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  if (toggle && sidebar) {
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('active');
+    });
 
-    // Prefer dynamic settings from backend
-    try {
-      const response = await fetch('/api/settings/identity');
-      if (response.ok) {
-        identity = await response.json();
+    // Close sidebar on click away
+    document.addEventListener('click', (e) => {
+      if (sidebar.classList.contains('active') && !sidebar.contains(e.target)) {
+        sidebar.classList.remove('active');
       }
-    } catch (_) {
-      // Ignore network errors and fall back to static config
-    }
+    });
 
-    // Fallback to static config if API not available
-    if (!identity || !identity.schoolName) {
-      identity = (window.APP_CONFIG && window.APP_CONFIG.IDENTITY) || {};
-    }
-
-    if (!identity || !identity.schoolName) return;
-
-    const schoolName = identity.schoolName;
-    const platformLabel = identity.platformLabel || 'المنصة التعليمية';
-    const adminName = identity.adminName || 'إدارة المدرسة';
-    const adminRole = identity.adminRole || 'مسؤول النظام التعليمي';
-    const platformFullTitle = `${platformLabel} - ${schoolName}`;
-
-    // Document title (metadata)
-    document.title = platformFullTitle;
-
-    // Helper to set text safely
-    const setText = (selector, value) => {
-      const el = document.querySelector(selector);
-      if (el && value) el.textContent = value;
-    };
-
-    // Header
-    setText('[data-identity="platform-title"]', platformFullTitle);
-    setText(
-      '[data-identity="platform-subtitle"]',
-      `منصة تعليمية لخدمة طلاب ${schoolName}`
-    );
-
-    // Sidebar
-    setText(
-      '[data-identity="sidebar-platform-title"]',
-      platformLabel
-    );
-    setText(
-      '[data-identity="sidebar-admin-label"]',
-      adminName
-    );
-    setText(
-      '[data-identity="sidebar-school-name"]',
-      schoolName
-    );
-
-    // Footer
-    setText(
-      '[data-identity="footer-admin-name"]',
-      adminName
-    );
-    setText(
-      '[data-identity="footer-admin-role"]',
-      adminRole
-    );
-    setText(
-      '[data-identity="footer-school-name"]',
-      schoolName
-    );
-
-    const year =
-      identity.copyrightYear ||
-      (window.APP_CONFIG &&
-        window.APP_CONFIG.IDENTITY &&
-        window.APP_CONFIG.IDENTITY.copyrightYear) ||
-      new Date().getFullYear();
-
-    setText(
-      '[data-identity="footer-copy"]',
-      `© ${year} جميع الحقوق محفوظة - ${schoolName}`
-    );
-  } catch (e) {
-    // Fail silently; identity is not critical for functionality
+    // Handle navigation clicks
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-navigate]');
+      if (el) {
+        router.navigate(el.getAttribute('data-navigate'));
+        if (window.innerWidth < 1024) sidebar.classList.remove('active');
+      }
+    });
   }
-})();
+};
 
-// Home Page - Show all classes with their units grouped
+/**
+ * PAGE RENDERERS
+ */
+
+// 1. Dashboard Landing
 router.on('/', async () => {
   try {
-    app.innerHTML = `<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل المحتوى...</span></div>`;
-    
-    // Fetch all classes
-    const classes = await api.get('/api/classes');
-    
-    if (classes.length === 0) {
-      app.innerHTML = `
-        <h1 class="page-title">مرحبًا بكم أعزائي الطلاب</h1>
-        <p class="page-subtitle">لا يوجد محتوى متاح حاليًا. يرجى العودة لاحقًا.</p>
-      `;
-      return;
-    }
-    
-    // Fetch units for all classes
-    const allUnits = await api.get('/api/units');
-    
-    // Group units by classId
-    const unitsByClass = {};
-    allUnits.forEach(unit => {
-      if (!unitsByClass[unit.class_id]) {
-        unitsByClass[unit.class_id] = [];
-      }
-      unitsByClass[unit.class_id].push(unit);
-    });
-    
-    // Build HTML for each class with its units
-    let classesHTML = '';
-    
-    for (const cls of classes) {
-      const classUnits = unitsByClass[cls.id] || [];
-      
-      let unitsHTML = '';
-      if (classUnits.length > 0) {
-        unitsHTML = classUnits.map(unit => `
-          <div class="list-item" data-navigate="/unit/${unit.id}" role="button" tabindex="0">
-            <h4>${escapeHtml(unit.title)}</h4>
-            ${unit.description ? `<p>${escapeHtml(unit.description)}</p>` : ''}
-            <div class="list-item-icon">
-              <i class="fas fa-chevron-left"></i>
+    app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل المنصة...</span></div>';
+
+    const [classes, units] = await Promise.all([
+      api.get('/api/classes'),
+      api.get('/api/units')
+    ]);
+
+    const stats = {
+      totalClasses: classes.length,
+      totalUnits: units.length,
+    };
+
+    let classesHTML = classes.slice(0, 6).map(cls => {
+      const classUnitsCount = units.filter(u => u.class_id === cls.id).length;
+      return `
+        <div class="premium-card animate-up" data-navigate="/class/${cls.id}">
+          <div class="card-icon"><i class="fas fa-book-bookmark"></i></div>
+          <h3 class="card-title">${escapeHtml(cls.name)}</h3>
+          <p class="card-desc">استعرض جميع الوحدات والدروس المتاحة لهذا الصف الدراسي بترتيب منظم.</p>
+          <div class="card-footer">
+            <div class="card-stat">
+              <i class="fas fa-layer-group"></i>
+              <span>${classUnitsCount} وحدات</span>
             </div>
-          </div>
-        `).join('');
-      } else {
-        unitsHTML = '<p style="color: #64748b; padding: 1rem; text-align: center;">لا توجد وحدات متاحة</p>';
-      }
-      
-      classesHTML += `
-        <div class="class-section" style="margin-bottom: 2.5rem;">
-          <div class="card" style="cursor: default; margin-bottom: 1rem; background: linear-gradient(135deg, #1e3a8a 0%, #0891b2 100%); color: white;">
-            <h2 style="color: white; margin: 0; font-size: 1.5rem;">${escapeHtml(cls.name)}</h2>
-          </div>
-          <div class="list-view">
-            ${unitsHTML}
+            <div class="btn-arrow"><i class="fas fa-arrow-left"></i></div>
           </div>
         </div>
       `;
-    }
-    
-    app.innerHTML = `
-      <h1 class="page-title">مرحبًا بكم أعزائي الطلاب</h1>
-      <p class="page-subtitle">جميع الصفوف الدراسية والوحدات مرتبة ومنظمة لكم</p>
-      <div class="classes-container">
-        ${classesHTML}
-      </div>
-    `;
-    
-  } catch (error) {
-    app.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h3>خطأ في تحميل المحتوى</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
-  }
-});
+    }).join('');
 
-// Classes List Page
-router.on('/classes', async () => {
-  try {
-    app.innerHTML = `<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الصفوف الدراسية...</span></div>`;
-    
-    const classes = await api.get('/api/classes');
-    
-    if (classes.length === 0) {
-      app.innerHTML = `
-        <h1 class="page-title">الصفوف الدراسية</h1>
-        <div class="empty-state">
-          <div class="empty-state-icon"><i class="fas fa-book-open"></i></div>
-          <h3>لا توجد صفوف دراسية متاحة حاليًا</h3>
-          <p>يرجى العودة لاحقًا للاطلاع على المحتوى الجديد</p>
+    app.innerHTML = `
+      <div class="dashboard">
+        <div class="animate-up">
+          <h1 class="page-title">مرحباً بك في رحلتك التعليمية</h1>
+          <p class="page-subtitle">اختر صفك الدراسي وابدأ في استكشاف دروسك اليوم بتجربة ممتعة وسهلة.</p>
         </div>
-      `;
-      if (window.i18n) window.i18n.translatePage();
-      return;
-    }
 
-    const classesHTML = classes.map(cls => `
-      <div class="card" data-navigate="/class/${cls.id}" role="button" tabindex="0">
-        <h3>${escapeHtml(cls.name)}</h3>
-        <p>اضغط لعرض الوحدات الدراسية</p>
-      </div>
-    `).join('');
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 4rem;">
+          <div class="premium-card animate-up" style="background: linear-gradient(135deg, white, #f0f9ff); border: none; box-shadow: var(--glass-shadow);">
+            <p style="font-size: 0.85rem; color: var(--text-light); font-weight: 800;">الصفوف المتاحة</p>
+            <h2 style="font-size: 2.5rem; color: var(--primary-color);">${stats.totalClasses}</h2>
+          </div>
+          <div class="premium-card animate-up" style="background: linear-gradient(135deg, white, #f0fdfa); border: none; box-shadow: var(--glass-shadow);">
+            <p style="font-size: 0.85rem; color: var(--text-light); font-weight: 800;">إجمالي الوحدات</p>
+            <h2 style="font-size: 2.5rem; color: var(--secondary-color);">${stats.totalUnits}</h2>
+          </div>
+        </div>
 
-    app.innerHTML = `
-      <h1 class="page-title">الصفوف الدراسية</h1>
-      <p class="page-subtitle">اختر صفًا دراسيًا لعرض وحداته ودروسه</p>
-      <div class="cards-grid">
-        ${classesHTML}
+        <h2 class="animate-up" style="margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+          <i class="fas fa-stars" style="color: var(--accent-gold);"></i>
+          الصفوف الدراسية
+        </h2>
+        
+        <div class="cards-grid">
+          ${classesHTML || '<p>لا توجد صفوف مضافة حالياً.</p>'}
+        </div>
       </div>
     `;
-  } catch (error) {
-    app.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h3>خطأ في تحميل الصفوف</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
+  } catch (e) {
+    router.renderError(e.message);
   }
 });
 
-// Class Detail Page (Units)
+// 2. Units Page (Class Hub)
 router.on('/class/:id', async (classId) => {
   try {
-    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الوحدات...</span></div>';
-    
-    const [classData, units] = await Promise.all([
+    app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل الوحدات...</span></div>';
+
+    const [cls, units] = await Promise.all([
       api.get(`/api/classes/${classId}`),
       api.get(`/api/units/class/${classId}`)
     ]);
 
-    const breadcrumbs = `
-      <div class="breadcrumbs">
-        <a href="/"><i class="fas fa-home"></i> الرئيسية</a>
-        <span>«</span>
-        <span>${escapeHtml(classData.name)}</span>
-      </div>
-    `;
+    const term1 = units.filter(u => u.term === '1');
+    const term2 = units.filter(u => u.term === '2');
 
-    if (units.length === 0) {
-      app.innerHTML = `
-        ${breadcrumbs}
-        <h1 class="page-title">${escapeHtml(classData.name)}</h1>
-        <div class="empty-state">
-          <div class="empty-state-icon"><i class="fas fa-folder-open"></i></div>
-          <h3>لا توجد وحدات دراسية متاحة حاليًا</h3>
-          <p>هذا الصف لا يحتوي على وحدات دراسية بعد</p>
-        </div>
-      `;
-      return;
-    }
-
-    const unitsHTML = units.map(unit => `
-<div class="list-item" data-navigate="/unit/${unit.id}" role="button" tabindex="0">
-            <div>
-              <h4>${escapeHtml(unit.title)}</h4>
+    const renderUnitList = (unitList) => {
+      if (!unitList.length) return '<div class="animate-up" style="text-align:center; padding: 2rem; color: var(--text-light);">لا توجد وحدات بعد.</div>';
+      return unitList.map((u, i) => `
+        <div class="unit-row animate-up" data-navigate="/unit/${u.id}" style="animation-delay: ${i * 0.1}s">
+          <div class="unit-number">${i + 1}</div>
+          <div class="unit-info">
+            <h3 class="unit-title">${escapeHtml(u.title)}</h3>
+            <div class="unit-meta">
+              <span><i class="fas fa-file-lines"></i> ${u.category === 'Z' ? 'وحدة زوايا' : 'وحدة أساسية'}</span>
             </div>
-        <div class="list-item-icon">
-          <i class="fas fa-chevron-left"></i>
+          </div>
+          <div class="btn-arrow"><i class="fas fa-chevron-left"></i></div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    };
 
     app.innerHTML = `
-      ${breadcrumbs}
-      <h1 class="page-title">${escapeHtml(classData.name)}</h1>
-      <p class="page-subtitle">اختر وحدة دراسية لعرض دروسها</p>
-      <div class="list-view">
-        ${unitsHTML}
+      <div class="class-hub">
+        <div class="animate-up">
+           <button class="nav-item" style="border:none; background:none; cursor:pointer; padding:0; margin-bottom:1rem;" data-navigate="/classes">
+              <i class="fas fa-arrow-right"></i> كل الصفوف
+           </button>
+           <h1 class="page-title">${escapeHtml(cls.name)}</h1>
+           <p class="page-subtitle">استعرض المحتوى الدراسي المقسم حسب الفصل الدراسي الأول والثاني.</p>
+        </div>
+
+        <div class="term-tabs animate-up">
+          <button class="term-tab active" data-term="1">الفصل الأول</button>
+          <button class="term-tab" data-term="2">الفصل الثاني</button>
+        </div>
+
+        <div id="term-content-1" class="term-content">
+          ${renderUnitList(term1)}
+        </div>
+        <div id="term-content-2" class="term-content" style="display:none">
+          ${renderUnitList(term2)}
+        </div>
       </div>
     `;
-  } catch (error) {
-    app.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h3>خطأ في تحميل الوحدات</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
+
+    // Tab Logic
+    document.querySelectorAll('.term-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.term-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const term = btn.getAttribute('data-term');
+        document.getElementById('term-content-1').style.display = term === '1' ? 'block' : 'none';
+        document.getElementById('term-content-2').style.display = term === '2' ? 'block' : 'none';
+      });
+    });
+
+  } catch (e) {
+    router.renderError(e.message);
   }
 });
 
-// Unit Detail Page (Lessons)
+// 3. Lessons List (Unit Hub)
 router.on('/unit/:id', async (unitId) => {
   try {
-    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الدروس...</span></div>';
-    
+    app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل الدروس...</span></div>';
+
     const [unit, lessons] = await Promise.all([
       api.get(`/api/units/${unitId}`),
       api.get(`/api/lessons/unit/${unitId}`)
     ]);
 
-    // Get class info for breadcrumbs
-    const classData = await api.get(`/api/classes/${unit.class_id}`);
-
-    const breadcrumbs = `
-      <div class="breadcrumbs">
-        <a href="/"><i class="fas fa-home"></i> الرئيسية</a>
-        <span>«</span>
-        <a href="/class/${classData.id}">${escapeHtml(classData.name)}</a>
-        <span>«</span>
-        <span>${escapeHtml(unit.title)}</span>
-      </div>
-    `;
-
-    if (lessons.length === 0) {
-      app.innerHTML = `
-        ${breadcrumbs}
-        <h1 class="page-title">${escapeHtml(unit.title)}</h1>
-        <div class="empty-state">
-          <div class="empty-state-icon"><i class="fas fa-file-alt"></i></div>
-          <h3>لا توجد دروس متاحة حاليًا</h3>
-          <p>هذه الوحدة لا تحتوي على دروس بعد</p>
-        </div>
-      `;
-      return;
-    }
-
-    // Group lessons by section/order or display as modern cards
-    const lessonsHTML = lessons.map((lesson, index) => `
-      <div class="lesson-card" data-navigate="/lesson/${lesson.id}" role="button" tabindex="0">
-        <div class="lesson-card-number">${index + 1}</div>
-        <div class="lesson-card-content">
-          <h3 class="lesson-card-title">${escapeHtml(lesson.title)}</h3>
-          ${lesson.description ? `<p class="lesson-card-desc">${escapeHtml(lesson.description)}</p>` : ''}
-          <div class="lesson-card-meta">
-            <span class="lesson-card-icon"><i class="fas fa-book-open"></i></span>
-            <span class="lesson-card-action">ادخل الدرس</span>
-          </div>
-        </div>
-        <div class="lesson-card-arrow">
-          <i class="fas fa-arrow-left"></i>
+    const lessonsHTML = lessons.map((l, i) => `
+      <div class="premium-card animate-up" data-navigate="/lesson/${l.id}" style="animation-delay: ${i * 0.1}s">
+        <div class="lesson-thumb"><i class="fas fa-graduation-cap"></i></div>
+        <h3 class="card-title" style="font-size: 1.25rem;">${escapeHtml(l.title)}</h3>
+        <div class="card-footer">
+           <div class="card-stat"><i class="fas fa-clock"></i> <span>${estimateReadTime(l.content)} دقيقة قراءة</span></div>
+           <div class="btn-arrow"><i class="fas fa-play" style="font-size: 0.8rem;"></i></div>
         </div>
       </div>
     `).join('');
 
     app.innerHTML = `
-      ${breadcrumbs}
-      <h1 class="page-title">${escapeHtml(unit.title)}</h1>
-      <p class="page-subtitle">جميع الدروس في هذه الوحدة</p>
-      <div class="lessons-modern-grid">
-        ${lessonsHTML}
+      <div class="unit-hub">
+        <div class="animate-up">
+           <button class="nav-item" style="border:none; background:none; cursor:pointer;" data-navigate="/class/${unit.class_id}">
+              <i class="fas fa-arrow-right"></i> عودة للوحدات
+           </button>
+           <h1 class="page-title">${escapeHtml(unit.title)}</h1>
+           <p class="page-subtitle">قائمة الدروس المتاحة في هذه الوحدة.</p>
+        </div>
+
+        <div class="cards-grid">
+          ${lessonsHTML || '<p>لا توجد دروس في هذه الوحدة حالياً.</p>'}
+        </div>
       </div>
     `;
-  } catch (error) {
-    app.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h3>خطأ في تحميل الدروس</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
+  } catch (e) {
+    router.renderError(e.message);
   }
 });
 
-// Lesson Content Page
+// 4. Lesson Content (Reader View)
 router.on('/lesson/:id', async (lessonId) => {
   try {
-    app.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><span>جارٍ تحميل الدرس...</span></div>';
-    
+    app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل الدرس...</span></div>';
+
     const lesson = await api.get(`/api/lessons/${lessonId}`);
-    const unit = await api.get(`/api/units/${lesson.unit_id}`);
-    const classData = await api.get(`/api/classes/${unit.class_id}`);
 
-    const breadcrumbs = `
-      <div class="breadcrumbs">
-        <a href="/"><i class="fas fa-home"></i> الرئيسية</a>
-        <span>«</span>
-        <a href="/class/${classData.id}">${escapeHtml(classData.name)}</a>
-        <span>«</span>
-        <a href="/unit/${unit.id}">${escapeHtml(unit.title)}</a>
-        <span>«</span>
-        <span>${escapeHtml(lesson.title)}</span>
-      </div>
-    `;
-
-    // Extract videos from lesson
-    let videosSections = '';
-    if (lesson.videos && Array.isArray(lesson.videos) && lesson.videos.length > 0) {
-      videosSections = lesson.videos.map((video) => {
-        const videoId = extractYouTubeId(video.video_url);
-        if (!videoId) return '';
-        
-        const size = video.size || 'large';
-        const position = video.position || 'bottom';
-        const videoEmbed = `
-          <div class="video-container video-${size}">
-            <iframe 
-              src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
-              frameborder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowfullscreen
-              title="فيديو الدرس"
-            ></iframe>
-          </div>
-        `;
-        
-        const videoExplanation = video.explanation ? `
-          <div class="video-explanation">
-            ${video.explanation.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
+    // Process Images and Videos
+    let mediaHTML = '';
+    if (lesson.videos?.length) {
+      mediaHTML += lesson.videos.map(v => {
+        const vidId = extractYouTubeId(v.video_url);
+        return vidId ? `
+          <div style="margin: 2rem 0; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg);">
+            <iframe width="100%" height="450" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>
+            ${v.explanation ? `<div style="padding: 1.5rem; background: #fff; border-top: 1px solid #eee;">${escapeHtml(v.explanation)}</div>` : ''}
           </div>
         ` : '';
-        
-        if (position === 'side') {
-          return `
-            <div class="video-wrapper video-side">
-              <div class="video-embed-section">${videoEmbed}</div>
-              <div class="video-caption-section">${videoExplanation}</div>
-            </div>
-          `;
-        } else if (position === 'top') {
-          return `
-            <div class="video-wrapper video-top-caption">
-              ${videoExplanation}
-              ${videoEmbed}
-            </div>
-          `;
-        } else {
-          return `
-            <div class="video-wrapper video-bottom-caption">
-              ${videoEmbed}
-              ${videoExplanation}
-            </div>
-          `;
-        }
       }).join('');
     }
 
-    // Extract images from lesson
-    let imagesSections = '';
-    if (lesson.images && Array.isArray(lesson.images) && lesson.images.length > 0) {
-      imagesSections = lesson.images.map((image) => {
-        const size = image.size || 'medium';
-        const position = image.position || 'bottom';
-        const imageEmbed = `
-          <div class="image-container image-${size}">
-            <img src="${image.image_path}" alt="صورة الدرس" style="width: 100%; height: auto; border-radius: 8px;">
-          </div>
-        `;
-        
-        const imageCaption = image.caption ? `
-          <div class="image-caption">
-            ${image.caption.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
-          </div>
-        ` : '';
-        
-        if (position === 'side') {
-          return `
-            <div class="image-wrapper image-side">
-              <div class="image-embed-section">${imageEmbed}</div>
-              <div class="image-caption-section">${imageCaption}</div>
-            </div>
-          `;
-        } else if (position === 'top') {
-          return `
-            <div class="image-wrapper image-top-caption">
-              ${imageCaption}
-              ${imageEmbed}
-            </div>
-          `;
-        } else {
-          return `
-            <div class="image-wrapper image-bottom-caption">
-              ${imageEmbed}
-              ${imageCaption}
-            </div>
-          `;
-        }
-      }).join('');
+    if (lesson.images?.length) {
+      mediaHTML += lesson.images.map(img => `
+        <div style="margin: 2rem 0;">
+          <img src="${img.image_path}" style="width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+          ${img.caption ? `<p style="text-align:center; color: var(--text-muted); margin-top: 1rem;">${escapeHtml(img.caption)}</p>` : ''}
+        </div>
+      `).join('');
     }
 
-    const content = lesson.content 
-      ? lesson.content.split('\n').map(p => `<p>${escapeHtml(p)}</p>`).join('') 
-      : '';
-    
-    const explanationHTML = `${videosSections}${imagesSections}${content ? `<div class="lesson-content">${content}</div>` : ''}`;
+    app.innerHTML = `
+      <div class="lesson-reader">
+        <div class="reader-container animate-up">
+           <div class="reader-header">
+             <button class="nav-item" style="border:none; background:none; cursor:pointer; padding:0; margin-bottom: 2rem;" data-navigate="/unit/${lesson.unit_id}">
+                <i class="fas fa-arrow-right"></i> عودة للوحدة
+             </button>
+             <h1 style="font-size: 2.5rem; color: var(--text-main); line-height: 1.4;">${escapeHtml(lesson.title)}</h1>
+             <div style="display: flex; gap: 2rem; margin-top: 1.5rem; color: var(--text-light); font-weight: 700;">
+                <span><i class="fas fa-clock"></i> ${estimateReadTime(lesson.content)} دقائق قراءة</span>
+                <span><i class="fas fa-calendar"></i> ${new Date(lesson.created_at || Date.now()).toLocaleDateString('ar-EG')}</span>
+             </div>
+           </div>
 
-    app.innerHTML = `
-      ${breadcrumbs}
-      <h1 class="page-title">${escapeHtml(lesson.title)}</h1>
-      
-      <div class="lesson-tabs">
-        <button class="lesson-tab active" data-tab="explanation">
-          <i class="fas fa-book-reader"></i> الشرح
-        </button>
-        <button class="lesson-tab" data-tab="questions">
-          <i class="fas fa-question-circle"></i> بنك الأسئلة
-        </button>
-      </div>
-      
-      <div class="tab-content" id="explanation-tab">
-        ${explanationHTML || '<p class="no-content">لا يوجد محتوى شرح لهذا الدرس بعد</p>'}
-      </div>
-      
-      <div class="tab-content hidden" id="questions-tab">
-        <div class="questions-loading"><i class="fas fa-spinner fa-spin"></i> جارٍ تحميل الأسئلة...</div>
+           <div class="lesson-content">
+             ${mediaHTML}
+             ${lesson.content ? lesson.content.split('\n').map(p => p.trim() ? `<p>${escapeHtml(p)}</p>` : '').join('') : ''}
+           </div>
+
+           <div style="margin-top: 4rem; padding-top: 2rem; border-top: 2px solid var(--bg-main); display: flex; justify-content: center; gap: 1rem;">
+              <button class="premium-card" style="padding: 1rem 2rem; border-radius: var(--radius-full); cursor: pointer;" onclick="router.navigate('/unit/${lesson.unit_id}')">
+                <i class="fas fa-check-circle" style="color: var(--secondary-color);"></i>
+                <span>أنهيت القراءة</span>
+              </button>
+           </div>
+        </div>
       </div>
     `;
-    
-    // Tab switching
-    const tabs = document.querySelectorAll('.lesson-tab');
-    const explanationTab = document.getElementById('explanation-tab');
-    const questionsTab = document.getElementById('questions-tab');
-    let questionsLoaded = false;
-    
-    tabs.forEach(tab => {
-      tab.addEventListener('click', async () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        
-        const tabName = tab.getAttribute('data-tab');
-        if (tabName === 'explanation') {
-          explanationTab.classList.remove('hidden');
-          questionsTab.classList.add('hidden');
-        } else {
-          explanationTab.classList.add('hidden');
-          questionsTab.classList.remove('hidden');
-          
-          // Load questions if not loaded
-          if (!questionsLoaded) {
-            await loadQuestions(lessonId, questionsTab);
-            questionsLoaded = true;
-          }
-        }
-      });
-    });
-    
-  } catch (error) {
-    app.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <h3>خطأ في تحميل الدرس</h3>
-        <p>${error.message}</p>
-      </div>
-    `;
+  } catch (e) {
+    router.renderError(e.message);
   }
 });
 
-// Load and display questions for quiz
-async function loadQuestions(lessonId, container) {
-  try {
-    const questions = await api.get(`/api/lessons/${lessonId}/questions`);
-    
-    if (!questions || questions.length === 0) {
-      container.innerHTML = `
-        <div class="no-questions">
-          <i class="fas fa-clipboard-list"></i>
-          <p>لا توجد أسئلة لهذا الدرس بعد</p>
-        </div>
-      `;
-      return;
-    }
-    
-    container.innerHTML = `
-      <div class="quiz-container">
-        <div class="quiz-header">
-          <h3><i class="fas fa-clipboard-check"></i> اختبر نفسك</h3>
-          <p>عدد الأسئلة: ${questions.length}</p>
-          <div class="quiz-score" id="quiz-score"></div>
-        </div>
-        <div class="questions-list" id="questions-list">
-          ${questions.map((q, index) => `
-            <div class="question-card" id="question-${q.id}">
-              <div class="question-number">السؤال ${index + 1}</div>
-              <div class="question-text">${escapeHtml(q.question_text)}</div>
-              <div class="options-list">
-                <label class="option-item" data-option="A">
-                  <input type="radio" name="q${q.id}" value="A">
-                  <span class="option-letter">أ</span>
-                  <span class="option-text">${escapeHtml(q.option_a)}</span>
-                </label>
-                <label class="option-item" data-option="B">
-                  <input type="radio" name="q${q.id}" value="B">
-                  <span class="option-letter">ب</span>
-                  <span class="option-text">${escapeHtml(q.option_b)}</span>
-                </label>
-                <label class="option-item" data-option="C">
-                  <input type="radio" name="q${q.id}" value="C">
-                  <span class="option-letter">ج</span>
-                  <span class="option-text">${escapeHtml(q.option_c)}</span>
-                </label>
-                <label class="option-item" data-option="D">
-                  <input type="radio" name="q${q.id}" value="D">
-                  <span class="option-letter">د</span>
-                  <span class="option-text">${escapeHtml(q.option_d)}</span>
-                </label>
-              </div>
-              <button type="button" class="btn btn-check-answer" data-action="check-answer" data-question-id="${q.id}" data-lesson-id="${lessonId}">
-                <i class="fas fa-check"></i> تحقق من الإجابة
-              </button>
-              <div class="answer-feedback" id="feedback-${q.id}"></div>
-            </div>
-          `).join('')}
-        </div>
-        <button type="button" class="btn btn-submit-quiz" data-action="submit-quiz" data-lesson-id="${lessonId}" data-question-ids="${JSON.stringify(questions.map(q => q.id)).replace(/"/g, '&quot;')}">
-          <i class="fas fa-paper-plane"></i> إرسال جميع الإجابات
-        </button>
-      </div>
-    `;
-  } catch (error) {
-    container.innerHTML = `
-      <div class="error">
-        <i class="fas fa-exclamation-triangle"></i>
-        <p>فشل تحميل الأسئلة: ${error.message}</p>
-      </div>
-    `;
-  }
-}
-
-// Check individual answer
-window.checkAnswer = async function(questionId, lessonId) {
-  const selected = document.querySelector(`input[name="q${questionId}"]:checked`);
-  const feedback = document.getElementById(`feedback-${questionId}`);
-  const questionCard = document.getElementById(`question-${questionId}`);
-  
-  if (!selected) {
-    feedback.innerHTML = '<span class="feedback-warning"><i class="fas fa-exclamation-circle"></i> الرجاء اختيار إجابة</span>';
-    return;
-  }
-  
-  try {
-    const response = await fetch(`/api/lessons/${lessonId}/questions/${questionId}/check`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answer: selected.value })
-    });
-    const result = await response.json();
-    
-    // Disable all options for this question
-    const options = questionCard.querySelectorAll('.option-item');
-    options.forEach(opt => {
-      opt.classList.remove('correct', 'incorrect');
-      const optLetter = opt.getAttribute('data-option');
-      if (optLetter === result.correctAnswer) {
-        opt.classList.add('correct');
-      } else if (optLetter === selected.value && !result.correct) {
-        opt.classList.add('incorrect');
-      }
-    });
-    
-    if (result.correct) {
-      feedback.innerHTML = '<span class="feedback-correct"><i class="fas fa-check-circle"></i> إجابة صحيحة! أحسنت</span>';
-      questionCard.classList.add('answered-correct');
-    } else {
-      feedback.innerHTML = '<span class="feedback-incorrect"><i class="fas fa-times-circle"></i> إجابة خاطئة</span>';
-      questionCard.classList.add('answered-incorrect');
-    }
-  } catch (error) {
-    feedback.innerHTML = '<span class="feedback-warning"><i class="fas fa-exclamation-circle"></i> حدث خطأ</span>';
-  }
-};
-
-// Submit all answers
-window.submitQuiz = async function(lessonId, questionIds) {
-  let correct = 0;
-  let total = questionIds.length;
-  
-  for (const qId of questionIds) {
-    const selected = document.querySelector(`input[name="q${qId}"]:checked`);
-    if (selected) {
-      try {
-        const response = await fetch(`/api/lessons/${lessonId}/questions/${qId}/check`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ answer: selected.value })
-        });
-        const result = await response.json();
-        if (result.correct) correct++;
-        
-        // Show feedback
-        const feedback = document.getElementById(`feedback-${qId}`);
-        const questionCard = document.getElementById(`question-${qId}`);
-        const options = questionCard.querySelectorAll('.option-item');
-        
-        options.forEach(opt => {
-          opt.classList.remove('correct', 'incorrect');
-          const optLetter = opt.getAttribute('data-option');
-          if (optLetter === result.correctAnswer) {
-            opt.classList.add('correct');
-          } else if (optLetter === selected.value && !result.correct) {
-            opt.classList.add('incorrect');
-          }
-        });
-        
-        if (result.correct) {
-          feedback.innerHTML = '<span class="feedback-correct"><i class="fas fa-check-circle"></i> صحيح</span>';
-          questionCard.classList.add('answered-correct');
-        } else {
-          feedback.innerHTML = '<span class="feedback-incorrect"><i class="fas fa-times-circle"></i> خطأ</span>';
-          questionCard.classList.add('answered-incorrect');
-        }
-      } catch (e) {}
-    }
-  }
-  
-  const scoreDiv = document.getElementById('quiz-score');
-  const percentage = Math.round((correct / total) * 100);
-  scoreDiv.innerHTML = `
-    <div class="score-result ${percentage >= 50 ? 'score-pass' : 'score-fail'}">
-      <i class="fas ${percentage >= 50 ? 'fa-trophy' : 'fa-sad-tear'}"></i>
-      <span>النتيجة: ${correct} من ${total} (${percentage}%)</span>
-    </div>
-  `;
-  scoreDiv.scrollIntoView({ behavior: 'smooth' });
-};
-
-// Utility function to extract YouTube video ID
-function extractYouTubeId(url) {
-  if (!url) return null;
-  
-  // Handle various YouTube URL formats
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=)([\w-]+)/,
-    /(?:youtube\.com\/embed\/)([\w-]+)/,
-    /(?:youtu\.be\/)([\w-]+)/,
-    /(?:youtube\.com\/v\/)([\w-]+)/
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-  
-  return null;
-}
-
-// Utility function to escape HTML
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Handle navigation
-window.addEventListener('popstate', () => {
+// Start the APP
+document.addEventListener('DOMContentLoaded', () => {
+  setupSidebar();
   router.handleRoute();
 });
-
-document.addEventListener('click', (e) => {
-  if (e.target.tagName === 'A' && e.target.href.startsWith(window.location.origin)) {
-    e.preventDefault();
-    router.navigate(e.target.getAttribute('href'));
-  }
-});
-
-// Delegated click handler (CSP-friendly: no inline handlers)
-app.addEventListener('click', (e) => {
-  const nav = e.target.closest('[data-navigate]');
-  if (nav) {
-    e.preventDefault();
-    router.navigate(nav.getAttribute('data-navigate'));
-    return;
-  }
-  const goHome = e.target.closest('[data-action="go-home"]');
-  if (goHome) {
-    e.preventDefault();
-    location.href = '/';
-    return;
-  }
-  const checkBtn = e.target.closest('[data-action="check-answer"]');
-  if (checkBtn) {
-    e.preventDefault();
-    const qId = checkBtn.getAttribute('data-question-id');
-    const lessonId = checkBtn.getAttribute('data-lesson-id');
-    if (qId != null && lessonId != null) checkAnswer(parseInt(qId, 10), parseInt(lessonId, 10));
-    return;
-  }
-  const submitBtn = e.target.closest('[data-action="submit-quiz"]');
-  if (submitBtn) {
-    e.preventDefault();
-    const lessonId = submitBtn.getAttribute('data-lesson-id');
-    const idsStr = submitBtn.getAttribute('data-question-ids');
-    if (lessonId != null && idsStr != null) {
-      try {
-        submitQuiz(parseInt(lessonId, 10), JSON.parse(idsStr));
-      } catch (_) {}
-    }
-    return;
-  }
-});
-
-app.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
-  const nav = e.target.closest('[data-navigate]');
-  if (nav) {
-    e.preventDefault();
-    router.navigate(nav.getAttribute('data-navigate'));
-  }
-});
-
-// Initial route
-router.handleRoute();
-
-// Viewer sidebar toggle (mobile)
-(function () {
-  const hamburger = document.getElementById('viewerHamburger');
-  const overlay = document.getElementById('viewerSidebarOverlay');
-  const sidebar = document.getElementById('viewerSidebar');
-  if (!hamburger || !overlay || !sidebar) return;
-  function toggle() {
-    sidebar.classList.toggle('active');
-    overlay.classList.toggle('active');
-    hamburger.classList.toggle('active');
-    overlay.setAttribute('aria-hidden', sidebar.classList.contains('active') ? 'false' : 'true');
-  }
-  hamburger.addEventListener('click', toggle);
-  overlay.addEventListener('click', toggle);
-})();

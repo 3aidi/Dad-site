@@ -3,97 +3,121 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>المنصة التعليمية للمدرسة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>المنصة التعليمية المميزة</title>
 
-  <!-- Cache Control: Prevent HTML caching -->
+  <!-- Essential Metadata -->
+  <meta name="description" content="منصة تعليمية متطورة لإدارة الدروس والاختبارات">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
 
-  <!-- Static assets with cache-busting version parameter -->
-  <script src="/version.js"></script>
-  <link rel="stylesheet" href="/shared-styles.css?v=nocache_3">
-  <link rel="stylesheet" href="/styles.css?v=nocache_3">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Modern Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap"
     rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Visual Styles -->
+  <script src="/version.js"></script>
+  <link rel="stylesheet" href="/styles.css?v=2.0.0">
 </head>
 
 <body>
-  <header>
-    <div class="header-content">
-      <div class="header-icon">
-        <i class="fas fa-globe-asia"></i>
-      </div>
-      <h1 data-identity="platform-title">المنصة التعليمية للمدرسة</h1>
-      <p class="header-subtitle" data-identity="platform-subtitle">
-        نظام تعليمي لإدارة الدروس والاختبارات لطلاب المدرسة
-      </p>
-    </div>
-  </header>
-
-  <div class="viewer-layout">
-    <button type="button" class="viewer-hamburger" id="viewerHamburger" aria-label="القائمة">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-    <div class="viewer-sidebar-overlay" id="viewerSidebarOverlay" aria-hidden="true"></div>
-    <aside class="viewer-sidebar" id="viewerSidebar">
-      <div class="viewer-sidebar-header">
-        <div class="viewer-sidebar-logo">
-          <i class="fas fa-globe-asia"></i>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-box">
+          <i class="fas fa-graduation-cap"></i>
         </div>
-        <h2 data-identity="sidebar-platform-title">المنصة التعليمية</h2>
-        <p data-identity="sidebar-admin-label">إدارة المدرسة</p>
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 800;" data-identity="platform-label">المنصة</h2>
+          <span style="font-size: 0.75rem; color: var(--text-light);" data-identity="school-name">مدرسة أبو فراس</span>
+        </div>
       </div>
-      <nav class="viewer-sidebar-nav">
-        <a href="/" id="nav-home">
-          <i class="fas fa-home"></i>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-navigate="/">
+          <i class="fas fa-th-large"></i>
           <span>الرئيسية</span>
-        </a>
-        <a href="/classes" id="nav-classes">
+        </div>
+        <div class="nav-item" data-navigate="/classes">
           <i class="fas fa-book-open"></i>
           <span>الصفوف الدراسية</span>
-        </a>
+        </div>
+        <div class="nav-item">
+          <i class="fas fa-star"></i>
+          <span>الدروس المفضلة</span>
+        </div>
+        <div class="nav-item">
+          <i class="fas fa-circle-info"></i>
+          <span>عن المنصة</span>
+        </div>
       </nav>
-      <div class="viewer-sidebar-footer">
-        <p data-identity="sidebar-school-name">مدرسة أبو فراس الحمداني للتعليم الأساسي</p>
+
+      <div style="margin-top: auto; padding-top: 2rem;">
+        <div style="padding: 1rem; background: rgba(37, 99, 235, 0.05); border-radius: var(--radius-md);">
+          <p style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.5rem;">تحتاج مساعدة؟</p>
+          <a href="#"
+            style="font-size: 0.85rem; font-weight: 700; color: var(--primary-color); text-decoration: none;">اتصل
+            بالإدارة</a>
+        </div>
       </div>
     </aside>
-    <main id="app">
-      <div class="loading">
-        <i class="fas fa-spinner fa-spin"></i>
-        <span>جارٍ التحميل...</span>
+
+    <!-- Content Area -->
+    <main class="main-content">
+      <!-- Header / Top Bar -->
+      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+        <button id="sidebarToggle"
+          style="background: white; border: 1px solid var(--border-light); width: 48px; height: 48px; border-radius: var(--radius-md); font-size: 1.2rem; cursor: pointer;">
+          <i class="fas fa-bars-staggered"></i>
+        </button>
+
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <div style="text-align: left;">
+            <p style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">مرحباً بك</p>
+            <p style="font-size: 0.9rem; font-weight: 800; color: var(--text-main);">طالبنا العزيز</p>
+          </div>
+          <div
+            style="width: 48px; height: 48px; background: #e2e8f0; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--text-muted);">
+            <i class="fas fa-user-graduate"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dynamic App Section -->
+      <div id="app">
+        <div class="loading">
+          <i class="fas fa-circle-notch fa-spin"></i>
+          <span>جارٍ تهيئة المحتوى...</span>
+        </div>
       </div>
     </main>
   </div>
 
-  <footer>
-    <div class="footer-content">
-      <div class="footer-section">
-        <i class="fas fa-globe-asia footer-icon"></i>
-        <h3 data-identity="footer-admin-name">إدارة المدرسة</h3>
-        <p data-identity="footer-admin-role">النظام التعليمي للمدرسة</p>
-        <p class="footer-school-name" data-identity="footer-school-name">
-          مدرسة أبو فراس الحمداني للتعليم الأساسي
-        </p>
-      </div>
-      <div class="footer-bottom">
-        <p data-identity="footer-copy">
-          &copy; ٢٠٢٦ جميع الحقوق محفوظة - مدرسة أبو فراس الحمداني للتعليم الأساسي
-        </p>
-      </div>
+  <!-- Mobile Navigation Bar -->
+  <nav class="mobile-nav">
+    <div class="nav-item active" data-navigate="/">
+      <i class="fas fa-home"></i>
     </div>
-  </footer>
+    <div class="nav-item" data-navigate="/classes">
+      <i class="fas fa-grid-2"></i>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-search"></i>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-bookmark"></i>
+    </div>
+  </nav>
 
-  <!-- JavaScript files with cache-busting version parameters -->
-  <script src="/config.js?v=1.0.0"></script>
-  <script src="/app.js?v=1.0.0"></script>
+  <!-- Core Scripts -->
+  <script src="/config.js"></script>
+  <script src="/app.js?v=2.0.0"></script>
 </body>
 
 </html>

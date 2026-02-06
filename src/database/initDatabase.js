@@ -5,7 +5,7 @@ const db = require('./database');
 async function initializeDatabase() {
   try {
     console.log('Initializing database...');
-    
+
     const isPostgres = process.env.DATABASE_URL && process.env.NODE_ENV === 'production';
 
     // Create Admin table
@@ -64,6 +64,7 @@ async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS classes (
           id SERIAL PRIMARY KEY,
           name TEXT NOT NULL,
+          display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -72,6 +73,7 @@ async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS classes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
+          display_order INTEGER DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -85,6 +87,8 @@ async function initializeDatabase() {
           id SERIAL PRIMARY KEY,
           class_id INTEGER NOT NULL,
           title TEXT NOT NULL,
+          category TEXT DEFAULT 'P',
+          display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
         )
@@ -95,6 +99,8 @@ async function initializeDatabase() {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           class_id INTEGER NOT NULL,
           title TEXT NOT NULL,
+          category TEXT DEFAULT 'P',
+          display_order INTEGER DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
         )
@@ -136,9 +142,31 @@ async function initializeDatabase() {
     }
     console.log('✓ Lessons table created');
 
+    console.log('✓ Lessons table created');
+
+    // MIGRATION: Ensure new columns exist even if tables existed
+    try {
+      if (isPostgres) {
+        await db.run('ALTER TABLE classes ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0');
+        await db.run('ALTER TABLE units ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0');
+        await db.run("ALTER TABLE units ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'P'");
+      } else {
+        // SQLite: Try adding columns, ignore if they exist
+        const safeAlter = async (sql) => {
+          try { await db.run(sql); } catch (e) { /* ignore duplicate column error */ }
+        };
+        await safeAlter('ALTER TABLE classes ADD COLUMN display_order INTEGER DEFAULT 0');
+        await safeAlter('ALTER TABLE units ADD COLUMN display_order INTEGER DEFAULT 0');
+        await safeAlter("ALTER TABLE units ADD COLUMN category TEXT DEFAULT 'P'");
+      }
+      console.log('✓ Schema migration verified');
+    } catch (err) {
+      console.log('Migration note:', err.message);
+    }
+
     // Check if admin exists
     const existingAdmin = await db.get('SELECT * FROM admins LIMIT 1');
-    
+
     if (!existingAdmin) {
       // Create default admin account
       const username = process.env.ADMIN_USERNAME || 'admin';
@@ -174,11 +202,16 @@ async function initializeDatabase() {
     }
 
     console.log('\n✓ Database initialization complete!');
-    process.exit(0);
+    if (require.main === module) process.exit(0);
   } catch (error) {
     console.error('Error initializing database:', error);
-    process.exit(1);
+    if (require.main === module) process.exit(1);
+    throw error;
   }
 }
 
-initializeDatabase();
+module.exports = initializeDatabase;
+
+if (require.main === module) {
+  initializeDatabase();
+}

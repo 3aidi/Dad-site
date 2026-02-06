@@ -13,6 +13,7 @@ const unitRoutes = require('./src/routes/unitRoutes');
 const lessonRoutes = require('./src/routes/lessonRoutes');
 const settingsRoutes = require('./src/routes/settingsRoutes');
 const db = require('./src/database/database');
+const initializeDatabase = require('./src/database/initDatabase');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,7 +35,7 @@ if (isProd && process.env.JWT_SECRET.length < 32) {
 async function ensureTablesExist() {
   try {
     const isPostgres = process.env.DATABASE_URL && process.env.NODE_ENV === 'production';
-    
+
     // Create videos table if not exists
     if (isPostgres) {
       await db.run(`
@@ -119,7 +120,7 @@ async function ensureTablesExist() {
       `);
     }
     console.log('✓ Database tables verified');
-    
+
     // Run database optimization (create indexes)
     const { optimizeDatabase } = require('./src/database/optimizeDatabase');
     await optimizeDatabase();
@@ -165,7 +166,7 @@ app.use(helmet({
 // Rate Limiting - Prevent brute force attacks
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Increased to 1000 for local dev
   message: { error: 'عدد كبير من الطلبات. يرجى المحاولة لاحقاً' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -174,7 +175,7 @@ const apiLimiter = rateLimit({
 // Strict rate limiting for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login attempts per 15 minutes
+  max: 100, // Increased to 100 for local dev
   message: { error: 'عدد كبير من محاولات تسجيل الدخول. يرجى المحاولة بعد 15 دقيقة' },
   skipSuccessfulRequests: true,
   standardHeaders: true,
@@ -197,7 +198,7 @@ app.use(cookieParser());
 
 app.use((req, res, next) => {
   const reqPath = req.path.toLowerCase();
-  
+
   // Never cache HTML files - always fetch fresh
   if (reqPath.endsWith('.html') || reqPath === '/' || reqPath.startsWith('/admin')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -210,7 +211,7 @@ app.use((req, res, next) => {
     const maxAge = isProd ? 7 * 24 * 60 * 60 : 0; // 7 days in seconds for production
     res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
   }
-  
+
   next();
 });
 
@@ -264,7 +265,7 @@ app.use((req, res) => {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   const status = err.status || err.statusCode || 500;
-  
+
   // Log error details server-side
   console.error(`[ERROR] ${status} - ${err.message}`);
   if (!isProd) {
@@ -275,7 +276,7 @@ app.use((err, req, res, next) => {
   const errorResponse = {
     error: isProd ? 'حدث خطأ في الخادم' : err.message
   };
-  
+
   // Include stack trace only in development
   if (!isProd && err.stack) {
     errorResponse.stack = err.stack;
@@ -295,8 +296,17 @@ process.on('SIGTERM', () => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+// Initialize DB then start server
+initializeDatabase().then(() => {
+  // Check tables
+  return ensureTablesExist();
+}).then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}).catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

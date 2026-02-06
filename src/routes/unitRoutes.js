@@ -13,7 +13,7 @@ router.get('/class/:classId', async (req, res) => {
       return res.status(400).json({ error: 'Invalid class id' });
     }
     const units = await db.all(
-      'SELECT * FROM units WHERE class_id = ? ORDER BY created_at ASC',
+      'SELECT * FROM units WHERE class_id = ? ORDER BY display_order ASC, created_at ASC',
       [parsed.value]
     );
     res.json(units);
@@ -31,11 +31,11 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid unit id' });
     }
     const unit = await db.get('SELECT * FROM units WHERE id = ?', [parsed.value]);
-    
+
     if (!unit) {
       return res.status(404).json({ error: 'Unit not found' });
     }
-    
+
     res.json(unit);
   } catch (error) {
     console.error('Error fetching unit:', error);
@@ -50,7 +50,7 @@ router.get('/', authenticateToken, async (req, res) => {
       SELECT u.*, c.name as class_name 
       FROM units u 
       JOIN classes c ON u.class_id = c.id 
-      ORDER BY u.created_at DESC
+      ORDER BY c.display_order ASC, u.display_order ASC
     `);
     res.json(units);
   } catch (error) {
@@ -70,9 +70,9 @@ router.post('/', authenticateToken, async (req, res) => {
     const class_idNum = classIdParsed.value;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'عنوان الوحدة مطلوب',
-        code: 'TITLE_REQUIRED' 
+        code: 'TITLE_REQUIRED'
       });
     }
 
@@ -80,17 +80,17 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicOnlyPattern.test(trimmed)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'عنوان الوحدة يجب أن يحتوي على أحرف عربية فقط',
-        code: 'INVALID_CHARACTERS' 
+        code: 'INVALID_CHARACTERS'
       });
     }
 
     const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_idNum]);
     if (!classExists) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'الصف الدراسي غير موجود',
-        code: 'CLASS_NOT_FOUND' 
+        code: 'CLASS_NOT_FOUND'
       });
     }
 
@@ -100,15 +100,15 @@ router.post('/', authenticateToken, async (req, res) => {
     );
 
     if (existingUnit) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'هذا العنوان موجود بالفعل في هذا الصف. يرجى اختيار عنوان آخر',
-        code: 'DUPLICATE_UNIT_TITLE' 
+        code: 'DUPLICATE_UNIT_TITLE'
       });
     }
 
     const result = await db.run(
-      'INSERT INTO units (title, class_id) VALUES (?, ?)',
-      [trimmed, class_idNum]
+      'INSERT INTO units (title, class_id, category) VALUES (?, ?, ?)',
+      [trimmed, class_idNum, req.body.category === 'Z' ? 'Z' : 'P']
     );
 
     const newUnit = await db.get('SELECT * FROM units WHERE id = ?', [result.id]);
@@ -127,7 +127,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Invalid unit id' });
     }
     const id = idParsed.value;
-    const { title, class_id } = req.body;
+    const { title, class_id, category } = req.body;
     const classIdParsed = parsePositiveInteger(class_id);
     if (!classIdParsed.valid) {
       return res.status(400).json({ error: 'الصف الدراسي مطلوب', code: 'CLASS_ID_REQUIRED' });
@@ -135,9 +135,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const class_idNum = classIdParsed.value;
 
     if (!title || title.trim() === '') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'عنوان الوحدة مطلوب',
-        code: 'TITLE_REQUIRED' 
+        code: 'TITLE_REQUIRED'
       });
     }
 
@@ -145,17 +145,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     const arabicOnlyPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicOnlyPattern.test(trimmed)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'عنوان الوحدة يجب أن يحتوي على أحرف عربية فقط',
-        code: 'INVALID_CHARACTERS' 
+        code: 'INVALID_CHARACTERS'
       });
     }
 
     const classExists = await db.get('SELECT id FROM classes WHERE id = ?', [class_idNum]);
     if (!classExists) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'الصف الدراسي غير موجود',
-        code: 'CLASS_NOT_FOUND' 
+        code: 'CLASS_NOT_FOUND'
       });
     }
 
@@ -165,15 +165,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
     );
 
     if (existingUnit) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         error: 'هذا العنوان موجود بالفعل في هذا الصف. يرجى اختيار عنوان آخر',
-        code: 'DUPLICATE_UNIT_TITLE' 
+        code: 'DUPLICATE_UNIT_TITLE'
       });
     }
 
+    const validCategory = category === 'Z' ? 'Z' : 'P';
+
     const result = await db.run(
-      'UPDATE units SET title = ?, class_id = ? WHERE id = ?',
-      [trimmed, class_idNum, id]
+      'UPDATE units SET title = ?, class_id = ?, category = ? WHERE id = ?',
+      [trimmed, class_idNum, validCategory, id]
     );
 
     if (result.changes === 0) {
@@ -205,6 +207,29 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Unit deleted' });
   } catch (error) {
     console.error('Error deleting unit:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ADMIN: Reorder units
+router.post('/reorder', authenticateToken, async (req, res) => {
+  try {
+    const { order } = req.body; // Array of IDs in new order
+
+    if (!order || !Array.isArray(order)) {
+      return res.status(400).json({ error: 'Invalid order data' });
+    }
+
+    // Process reordering in transaction-like manner
+    const updates = order.map((id, index) => {
+      return db.run('UPDATE units SET display_order = ? WHERE id = ?', [index, id]);
+    });
+
+    await Promise.all(updates);
+
+    res.json({ success: true, message: 'Units reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering units:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

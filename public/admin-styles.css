@@ -112,9 +112,11 @@ body {
   0% {
     left: -100%;
   }
+
   50% {
     left: 100%;
   }
+
   100% {
     left: 100%;
   }
@@ -216,7 +218,7 @@ body {
   .teacher-name-bg {
     font-size: clamp(2.5rem, 10vw, 6rem);
   }
-  
+
   .login-container .container {
     max-width: 340px;
     padding: 25px 30px;
@@ -231,17 +233,17 @@ body {
     text-align: center;
     line-height: 1.1;
   }
-  
+
   .login-container {
     padding: 1rem 0.5rem;
   }
-  
+
   .login-container .container {
     max-width: 100%;
     padding: 25px 25px;
     border-radius: 25px;
   }
-  
+
   .login-container .login-form-wrapper {
     padding: 0 10px 10px;
   }
@@ -251,7 +253,7 @@ body {
   .teacher-name-bg {
     font-size: clamp(1.75rem, 8vw, 3rem);
   }
-  
+
   .login-container .container {
     padding: 20px;
   }
@@ -496,7 +498,7 @@ body {
   background: var(--card-bg);
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card h3 {
@@ -516,7 +518,7 @@ body {
   background: var(--card-bg);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -881,10 +883,13 @@ table tr:hover {
 }
 
 @keyframes gradient-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1);
@@ -927,7 +932,7 @@ table tr:hover {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   z-index: 2000;
   justify-content: center;
   align-items: center;
@@ -1291,7 +1296,8 @@ table tr:hover {
   .form-group input,
   .form-group select,
   .form-group textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px;
+    /* Prevents zoom on iOS */
     padding: 0.5rem;
   }
 
@@ -1387,6 +1393,7 @@ table tr:hover {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
 /* ==================== MODERN ADMIN LESSON CARDS ==================== */
 
 .admin-lessons-grid {
@@ -1556,73 +1563,120 @@ table tr:hover {
 
 /* ==================== ADMIN CLASSES GRID ==================== */
 
+/* ==================== ADMIN CLASSES LIST ==================== */
+
 .admin-classes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  /* List view */
+  gap: 1rem;
+  /* Space between cards */
   margin-top: 2rem;
+  max-width: 1000px;
+  /* Limit width */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .admin-class-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  /* Wide card */
+  align-items: center;
+  /* Center vertically */
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
+  /* Slightly less rounded */
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  /* Softer shadow */
   transition: all var(--transition-normal);
   position: relative;
-  height: 100%;
+  height: auto;
+  min-height: 80px;
+  border: 1px solid var(--border-color);
+  /* Add border for definition */
+  margin-bottom: 0;
+  /* Let grid handle gap, or list handle spacing */
+  cursor: grab;
+  /* Show grab cursor */
+}
+
+.admin-class-card:active {
+  cursor: grabbing;
+}
+
+/* Drag & Drop Styles */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #f3f4f6;
+  border: 2px dashed #9ca3af;
+}
+
+.sortable-drag {
+  background: white;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  transform: scale(1.02);
+  z-index: 1000;
+  opacity: 1 !important;
 }
 
 .admin-class-card::before {
   content: '';
   position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  width: 100%;
-  height: 5px;
-  background: linear-gradient(90deg, #2563eb 0%, #0891b2 100%);
+  width: 6px;
+  /* Side accent instead of top */
+  height: auto;
+  background: linear-gradient(180deg, #2563eb 0%, #0891b2 100%);
   z-index: 1;
 }
 
 .admin-class-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 48px rgba(30, 58, 138, 0.16);
+  transform: translateY(-2px);
+  /* Slight lift */
+  box-shadow: 0 8px 16px rgba(30, 58, 138, 0.1);
+  border-color: #bfdbfe;
 }
 
 .admin-class-card-header {
   display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.5rem 1.5rem 1.25rem 1.5rem;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 1.5rem;
   position: relative;
   z-index: 2;
+  flex: 1;
+  /* Take available width */
 }
 
 .admin-class-card-number {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  min-width: 54px;
-  height: 54px;
-  border-radius: 12px;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
   color: white;
   font-weight: 700;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
   font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .admin-class-card-info {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  justify-content: center;
+  flex-direction: row;
+  /* Layout info horizontally if space permits, or column */
+  align-items: center;
+  gap: 1.5rem;
+  padding-right: 0.5rem;
 }
 
 .admin-class-card-title {
@@ -1630,72 +1684,56 @@ table tr:hover {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-color);
-  word-break: break-word;
   line-height: 1.3;
 }
 
 .admin-class-card-date {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--light-text);
+  display: none;
+  /* Hide date for cleaner wide look, or move it */
 }
 
-.admin-class-card-date i {
-  font-size: 0.75rem;
-  color: var(--secondary-color);
-  opacity: 0.8;
-}
-
+/* Remove old content area */
 .admin-class-card-content {
-  flex: 1;
-  padding: 0 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  justify-content: center;
-}
-
-.admin-class-card-stat {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--light-text);
-  padding: 0.5rem 0;
-}
-
-.admin-class-card-stat i {
-  width: 18px;
-  text-align: center;
-  color: var(--secondary-color);
-  font-size: 0.9rem;
+  display: none;
 }
 
 .admin-class-card-actions {
   display: flex;
-  gap: 0.6rem;
-  padding: 1rem 1.5rem 1.5rem 1.5rem;
-  border-top: 1px solid #f3f4f6;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  /* Same padding as header */
+  border-top: none;
+  /* No separator needed */
   justify-content: flex-end;
-  flex-wrap: wrap;
+  background: transparent;
+  width: auto;
 }
 
 .admin-class-card-actions .btn {
-  padding: 0.55rem 1rem;
+  padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
-  flex: 0 1 auto;
+  border-radius: 8px;
 }
 
 .admin-class-card-actions .btn-primary {
-  flex: 1;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  border: none;
+  font-weight: 600;
+}
+
+.admin-class-card-actions .btn-primary:hover {
+  background: rgba(37, 99, 235, 0.2);
 }
 
 .admin-class-card-actions .btn-danger {
-  flex: 0 1 auto;
-  min-width: 48px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+}
+
+.admin-class-card-actions .btn-danger:hover {
+  background: #fee2e2;
 }
 
 /* Responsive Adjustments for Classes Grid */
@@ -1792,6 +1830,7 @@ table tr:hover {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2044,4 +2083,3 @@ table tr:hover {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-

@@ -47,8 +47,28 @@ body {
   color: var(--text-color);
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
   direction: rtl;
-  overflow-x: hidden;
   min-width: 320px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary-color);
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
 }
 
 /* ==================== BUTTON STYLES ==================== */
@@ -141,6 +161,7 @@ button.btn-secondary {
   0% {
     left: -100%;
   }
+
   100% {
     left: 100%;
   }
@@ -201,8 +222,15 @@ header::before {
 }
 
 @keyframes float {
-  0%, 100% { transform: rotate(-5deg) translateY(0); }
-  50% { transform: rotate(-5deg) translateY(-8px); }
+
+  0%,
+  100% {
+    transform: rotate(-5deg) translateY(0);
+  }
+
+  50% {
+    transform: rotate(-5deg) translateY(-8px);
+  }
 }
 
 header h1 {
@@ -608,8 +636,15 @@ main {
 }
 
 @keyframes expand-line {
-  from { width: 0; opacity: 0; }
-  to { width: 80px; opacity: 1; }
+  from {
+    width: 0;
+    opacity: 0;
+  }
+
+  to {
+    width: 80px;
+    opacity: 1;
+  }
 }
 
 .page-subtitle {
@@ -781,7 +816,8 @@ main {
   position: relative;
   width: 100%;
   margin: 1rem auto;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  padding-bottom: 56.25%;
+  /* 16:9 aspect ratio */
   height: 0;
   overflow: hidden;
   border-radius: 12px;
@@ -1011,10 +1047,13 @@ main {
 }
 
 @keyframes gradient-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1);
@@ -1684,7 +1723,7 @@ footer::before {
   display: none;
 }
 
-.option-item input[type="radio"]:checked + .option-letter {
+.option-item input[type="radio"]:checked+.option-letter {
   background: var(--gradient-primary);
   color: white;
   border-color: var(--primary-color);
@@ -1836,8 +1875,15 @@ footer::before {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ==================== TABLET/DESKTOP QUIZ ENHANCEMENT ==================== */
@@ -2371,4 +2417,3 @@ footer::before {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-

@@ -223,13 +223,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag: true,
-  maxAge: 0 // We handle caching in the middleware above
-}));
-
-// API Routes
+// API Routes (mounted before static so /api/* is never served as files)
 app.use('/api/auth', authRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/units', unitRoutes);
@@ -240,6 +234,12 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api', (req, res, next) => {
   res.status(404).json({ error: 'Resource not found' });
 });
+
+// Serve static files (CSS, JS, images from /public)
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  maxAge: 0
+}));
 
 // Redirect /admin and /admin/ to admin login page
 app.get('/admin', (req, res) => {

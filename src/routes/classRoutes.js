@@ -5,6 +5,20 @@ const { parsePositiveInteger } = require('../utils/validation');
 
 const router = express.Router();
 
+// PUBLIC: Dashboard data (classes + units) for student home/classes page – one request, no auth
+router.get('/dashboard-data', async (req, res) => {
+  try {
+    const [classes, units] = await Promise.all([
+      db.all('SELECT * FROM classes ORDER BY display_order ASC, created_at DESC'),
+      db.all('SELECT id, class_id FROM units ORDER BY display_order ASC, created_at ASC')
+    ]);
+    res.json({ classes: classes || [], units: units || [] });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // PUBLIC: Get all classes
 router.get('/', async (req, res) => {
   try {

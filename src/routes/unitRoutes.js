@@ -23,6 +23,19 @@ router.get('/class/:classId', async (req, res) => {
   }
 });
 
+// PUBLIC: Get all units list (for student dashboard – no auth; must be before /:id)
+router.get('/list/all', async (req, res) => {
+  try {
+    const units = await db.all(
+      'SELECT id, class_id FROM units ORDER BY display_order ASC, created_at ASC'
+    );
+    res.json(units || []);
+  } catch (error) {
+    console.error('Error fetching units list:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // PUBLIC: Get single unit
 router.get('/:id', async (req, res) => {
   try {

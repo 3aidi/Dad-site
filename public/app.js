@@ -23,13 +23,6 @@ const extractYouTubeId = (url) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
-const estimateReadTime = (content) => {
-  if (!content) return 0;
-  const wordsPerMinute = 200;
-  const wordCount = content.trim().split(/\s+/).length;
-  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
-};
-
 /**
  * ROUTER
  */
@@ -99,6 +92,17 @@ const api = {
   }
 };
 
+/** Fetch dashboard data (classes + units). Fallback: if dashboard-data fails, use classes only. */
+async function getDashboardData() {
+  try {
+    const data = await api.get('/api/classes/dashboard-data');
+    return { classes: data.classes || [], units: data.units || [] };
+  } catch (err) {
+    const classes = await api.get('/api/classes');
+    return { classes: Array.isArray(classes) ? classes : [], units: [] };
+  }
+}
+
 const router = new AppRouter();
 const app = document.getElementById('app');
 
@@ -141,10 +145,7 @@ router.on('/', async () => {
   try {
     app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل المنصة...</span></div>';
 
-    const [classes, units] = await Promise.all([
-      api.get('/api/classes'),
-      api.get('/api/units')
-    ]);
+    const { classes, units } = await getDashboardData();
 
     const stats = {
       totalClasses: classes.length,
@@ -202,7 +203,48 @@ router.on('/', async () => {
   }
 });
 
-// 2. Units Page (Class Hub)
+// 2. Classes List Page (all classes – for nav "الصفوف الدراسية" and Back from class)
+router.on('/classes', async () => {
+  try {
+    app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل الصفوف...</span></div>';
+
+    const { classes, units } = await getDashboardData();
+
+    const classesHTML = classes.map(cls => {
+      const classUnitsCount = units.filter(u => u.class_id === cls.id).length;
+      return `
+        <div class="premium-card animate-up" data-navigate="/class/${cls.id}">
+          <div class="card-icon"><i class="fas fa-book-bookmark"></i></div>
+          <h3 class="card-title">${escapeHtml(cls.name)}</h3>
+          <p class="card-desc">استعرض جميع الوحدات والدروس المتاحة لهذا الصف الدراسي بترتيب منظم.</p>
+          <div class="card-footer">
+            <div class="card-stat">
+              <i class="fas fa-layer-group"></i>
+              <span>${classUnitsCount} وحدات</span>
+            </div>
+            <div class="btn-arrow"><i class="fas fa-arrow-left"></i></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    app.innerHTML = `
+      <div class="class-hub">
+        <div class="animate-up">
+          <h1 class="page-title">الصفوف الدراسية</h1>
+          <p class="page-subtitle">اختر صفك الدراسي لاستعراض الوحدات والدروس.</p>
+        </div>
+        <div class="cards-grid">
+          ${classesHTML || '<p>لا توجد صفوف مضافة حالياً.</p>'}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    router.renderError(e.message);
+  }
+});
+
+// 3. Units Page (Class Hub – inside a class)
 router.on('/class/:id', async (classId) => {
   try {
     app.innerHTML = '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i><span>تحميل الوحدات...</span></div>';
@@ -286,7 +328,6 @@ router.on('/unit/:id', async (unitId) => {
         <div class="lesson-thumb"><i class="fas fa-graduation-cap"></i></div>
         <h3 class="card-title" style="font-size: 1.25rem;">${escapeHtml(l.title)}</h3>
         <div class="card-footer">
-           <div class="card-stat"><i class="fas fa-clock"></i> <span>${estimateReadTime(l.content)} دقيقة قراءة</span></div>
            <div class="btn-arrow"><i class="fas fa-play" style="font-size: 0.8rem;"></i></div>
         </div>
       </div>
@@ -350,8 +391,7 @@ router.on('/lesson/:id', async (lessonId) => {
                 <i class="fas fa-arrow-right"></i> عودة للوحدة
              </button>
              <h1 style="font-size: 2.5rem; color: var(--text-main); line-height: 1.4;">${escapeHtml(lesson.title)}</h1>
-             <div style="display: flex; gap: 2rem; margin-top: 1.5rem; color: var(--text-light); font-weight: 700;">
-                <span><i class="fas fa-clock"></i> ${estimateReadTime(lesson.content)} دقائق قراءة</span>
+             <div style="margin-top: 1rem; color: var(--text-light); font-weight: 700;">
                 <span><i class="fas fa-calendar"></i> ${new Date(lesson.created_at || Date.now()).toLocaleDateString('ar-EG')}</span>
              </div>
            </div>
@@ -359,13 +399,6 @@ router.on('/lesson/:id', async (lessonId) => {
            <div class="lesson-content">
              ${mediaHTML}
              ${lesson.content ? lesson.content.split('\n').map(p => p.trim() ? `<p>${escapeHtml(p)}</p>` : '').join('') : ''}
-           </div>
-
-           <div style="margin-top: 4rem; padding-top: 2rem; border-top: 2px solid var(--bg-main); display: flex; justify-content: center; gap: 1rem;">
-              <button class="premium-card" style="padding: 1rem 2rem; border-radius: var(--radius-full); cursor: pointer;" onclick="router.navigate('/unit/${lesson.unit_id}')">
-                <i class="fas fa-check-circle" style="color: var(--secondary-color);"></i>
-                <span>أنهيت القراءة</span>
-              </button>
            </div>
         </div>
       </div>

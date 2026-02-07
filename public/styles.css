@@ -120,8 +120,8 @@ h4 {
 .sidebar {
   width: 300px;
   background: var(--bg-glass);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border-left: 1px solid var(--border-light);
   height: 100vh;
   position: sticky;
@@ -131,6 +131,94 @@ h4 {
   display: flex;
   flex-direction: column;
   transition: transform 0.4s var(--ease-in-out);
+}
+
+.sidebar-platform-label {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.sidebar-school-name {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.sidebar-help-wrap {
+  margin-top: auto;
+  padding-top: 2rem;
+}
+
+.sidebar-help-box {
+  padding: 1rem;
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.sidebar-help-text {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-help-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3rem;
+}
+
+.sidebar-toggle-btn {
+  background: white;
+  border: 1px solid var(--border-light);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-header-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.main-header-greeting {
+  text-align: left;
+}
+
+.main-header-greeting-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.main-header-greeting-name {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.main-header-avatar {
+  width: 48px;
+  height: 48px;
+  background: #e2e8f0;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: var(--text-muted);
 }
 
 .sidebar-logo {
@@ -455,8 +543,25 @@ h4 {
   animation: slideInUp 0.6s var(--ease-out) forwards;
 }
 
-/* Mobile Adjustments */
+/* Hide hamburger on desktop; show full nav. Show hamburger only on mobile/tablet */
+#sidebarToggle {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  #sidebarToggle {
+    display: none;
+  }
+}
+
+/* Mobile and tablet: show hamburger, sidebar as overlay */
 @media (max-width: 1024px) {
+  #sidebarToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .sidebar {
     position: fixed;
     transform: translateX(100%);
@@ -483,6 +588,7 @@ h4 {
   left: 0;
   right: 0;
   background: var(--bg-glass);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border-light);
   padding: 0.75rem 1rem;

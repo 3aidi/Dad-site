@@ -1077,6 +1077,7 @@ router.on('/admin/units', async () => {
     }, 100);
 
     // Handle URL parameters for direct filtering
+    const params = new URLSearchParams(window.location.search);
     setTimeout(() => {
       const classIdUrl = params.get('classId');
       const termUrl = params.get('term');
@@ -1087,6 +1088,13 @@ router.on('/admin/units', async () => {
         if (termUrl && termSelector) termSelector.value = termUrl;
         filterUnitsDashboard();
       }
+      // Ensure filter runs when custom select changes (in case native change doesn't fire)
+      const filterClassEl = document.getElementById('filter-class');
+      const filterTermEl = document.getElementById('filter-term');
+      const searchInput = document.getElementById('units-search-input');
+      if (filterClassEl) filterClassEl.addEventListener('change', filterUnitsDashboard);
+      if (filterTermEl) filterTermEl.addEventListener('change', filterUnitsDashboard);
+      if (searchInput) searchInput.addEventListener('input', filterUnitsDashboard);
     }, 150);
 
   } catch (error) {

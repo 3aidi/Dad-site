@@ -132,8 +132,8 @@ async function ensureTablesExist() {
 setTimeout(ensureTablesExist, 1000);
 
 // CORS Configuration (for production when frontend/backend are separate)
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+const corsOptions = { 
+  origin: process.env.FRONTEND_URL || '',
   credentials: true, // Allow cookies
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],

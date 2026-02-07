@@ -1,4 +1,180 @@
+.sidebar {
+  background: var(--gradient-primary);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(30, 58, 138, 0.18);
+  padding: 2rem 1rem 1rem 1rem;
+  margin: 1rem;
+  min-width: 270px;
+  max-width: 320px;
+  position: relative;
+  overflow: hidden;
+}
+.sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)" /></svg>');
+  opacity: 0.7;
+}
+
+.sidebar-header {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.sidebar-header h2 {
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}
+.sidebar-header p {
+  color: #cbd5e1;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.sidebar-header .school {
+  color: #e0e7ef;
+  font-size: 0.95rem;
+  margin-bottom: 1.2rem;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  z-index: 1;
+  position: relative;
+}
+.sidebar nav a {
+  color: #fff;
+  background: rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 0.85rem 1.2rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+.sidebar nav a.active, .sidebar nav a:hover {
+  background: #fff;
+  color: var(--primary-color);
+}
+.sidebar nav a i {
+  font-size: 1.2em;
+}
+
+.sidebar-footer {
+  margin-top: 2rem;
+  text-align: center;
+  z-index: 1;
+  position: relative;
+}
+.sidebar-footer .user-badge {
+  background: rgba(255,255,255,0.13);
+  color: #fff;
+  border-radius: 16px;
+  padding: 0.7rem 1.2rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+  display: inline-block;
+}
+/* Unified button style for all buttons */
+.sidebar-footer .logout-badge,
+.admin-page button,
+.admin-page .btn,
+button,
+.btn {
+  background: rgba(255,255,255,0.13) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  font-size: 1.08rem !important;
+  font-weight: 700 !important;
+  padding: 0.7rem 1.2rem !important;
+  font-family: 'Cairo', 'Tajawal', sans-serif !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  outline: none !important;
+}
+.sidebar-footer .logout-badge:hover,
+.admin-page button:hover,
+.admin-page .btn:hover,
+button:hover,
+.btn:hover,
+.sidebar-footer .logout-badge:focus,
+.admin-page button:focus,
+.admin-page .btn:focus,
+button:focus,
+.btn:focus {
+  background: #fff !important;
+  color: var(--primary-color) !important;
+  outline: none !important;
+}
+.sidebar-footer .logout-badge:active,
+.admin-page button:active,
+.admin-page .btn:active,
+button:active,
+.btn:active {
+  background: #e0e7ef !important;
+  color: var(--primary-color) !important;
+}
+.sidebar-footer .logout-badge:disabled,
+.admin-page button:disabled,
+.admin-page .btn:disabled,
+button:disabled,
+.btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
 :root {
+  /* Admin page full background and layout */
+  .admin-page {
+    min-height: 100vh;
+    background: var(--gradient-primary);
+    position: relative;
+    overflow-x: hidden;
+  }
+  .admin-page::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)" /></svg>');
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .admin-page .sidebar {
+    background: transparent;
+    box-shadow: none;
+    margin: 0 auto 2rem auto;
+    border-radius: 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .admin-page .main-content {
+    background: rgba(255,255,255,0.10);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(30, 58, 138, 0.10);
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 900px;
+    position: relative;
+    z-index: 1;
+  }
   --primary-color: #1e3a8a;
   --primary-dark: #1e40af;
   --secondary-color: #0891b2;
@@ -51,100 +227,7 @@ body {
   min-width: 320px;
 }
 
-/* ==================== BUTTON STYLES ==================== */
-.btn,
-button {
-  background: var(--gradient-blue, linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%));
-  color: white;
-  border: none;
-  padding: 0.875rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  font-family: 'Cairo', 'Tajawal', sans-serif;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow, 0 2px 8px rgba(30, 58, 138, 0.08));
-  position: relative;
-  overflow: hidden;
-}
 
-.btn::before,
-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-  /* Slow down the shiny shimmer effect */
-  animation: shimmer 1.8s infinite;
-}
-
-.btn:hover,
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg, 0 10px 40px rgba(30, 58, 138, 0.12));
-}
-
-.btn:active,
-button:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow, 0 2px 8px rgba(30, 58, 138, 0.08));
-}
-
-.btn:disabled,
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn:focus,
-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1), var(--shadow-lg, 0 10px 40px rgba(30, 58, 138, 0.12));
-}
-
-/* Button Variants */
-.btn-primary,
-button.btn-primary {
-  background: var(--gradient-blue, linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%));
-}
-
-.btn-success,
-button.btn-success {
-  background: var(--gradient-success, linear-gradient(135deg, #059669 0%, #10b981 100%));
-}
-
-.btn-danger,
-button.btn-danger {
-  background: var(--gradient-danger, linear-gradient(135deg, #dc2626 0%, #ef4444 100%));
-}
-
-.btn-info,
-button.btn-info {
-  background: var(--gradient-info, linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%));
-}
-
-.btn-secondary,
-button.btn-secondary {
-  background: var(--gradient-secondary, linear-gradient(135deg, #1e3a8a 0%, #0891b2 100%));
-}
-
-@keyframes shimmer {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
 
 /* Header - Mobile First */
 header {

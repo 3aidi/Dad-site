@@ -348,7 +348,6 @@ router.on('/admin/login', async () => {
 
   app.innerHTML = `
     <div class="login-container">
-      <div class="teacher-name-bg">${escapeHtml(platformFullTitle)}</div>
       <div class="login-form-wrapper">
         <div class="container">
           <div class="heading">تسجيل الدخول</div>

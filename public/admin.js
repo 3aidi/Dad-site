@@ -21,7 +21,7 @@ class AdminRouter {
     }
 
     window.history.pushState({}, '', path);
-    this.handleRoute();
+    await this.handleRoute();
   }
 
   async checkAuth() {
@@ -42,19 +42,19 @@ class AdminRouter {
     const path = window.location.pathname;
 
     if (path === '/admin/login' || path === '/admin' || path === '/admin.html') {
-      this.routes['/admin/login']?.();
+      await this.routes['/admin/login']?.();
     } else if (path === '/admin/dashboard') {
-      this.routes['/admin/dashboard']?.();
+      await this.routes['/admin/dashboard']?.();
     } else if (path === '/admin/classes') {
-      this.routes['/admin/classes']?.();
+      await this.routes['/admin/classes']?.();
     } else if (path === '/admin/units') {
-      this.routes['/admin/units']?.();
+      await this.routes['/admin/units']?.();
     } else if (path === '/admin/lessons') {
-      this.routes['/admin/lessons']?.();
+      await this.routes['/admin/lessons']?.();
     } else if (path === '/admin/settings') {
-      this.routes['/admin/settings']?.();
+      await this.routes['/admin/settings']?.();
     } else {
-      this.navigate('/admin/dashboard');
+      await this.navigate('/admin/dashboard');
     }
   }
 }
@@ -193,13 +193,92 @@ function showAlert(message, type = 'success') {
   const alert = document.createElement('div');
   alert.className = `alert ${alertClass}`;
   alert.innerHTML = `<span>${escapeHtml(message)}</span>`;
-  
+
   const content = document.querySelector('.admin-content');
   if (content) {
     content.insertBefore(alert, content.firstChild);
     setTimeout(() => alert.remove(), 5000);
   }
 }
+function initCustomSelects(container = document) {
+  const selects = container.querySelectorAll('select:not(.custom-select-hidden)');
+  selects.forEach(select => {
+    if (select.closest('.custom-select-wrapper')) return;
+
+    const options = Array.from(select.options).map(opt => ({
+      value: opt.value,
+      label: opt.text,
+      selected: opt.selected || select.value === opt.value
+    }));
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select-wrapper';
+
+    const selectedOption = options.find(o => o.selected) || options[0];
+    const displayLabel = selectedOption ? selectedOption.label : (select.getAttribute('placeholder') || 'اختر...');
+
+    wrapper.innerHTML = `
+      <div class="custom-select-trigger">
+        <span>${escapeHtml(displayLabel)}</span>
+        <i class="fas fa-chevron-down dropdown-chevron"></i>
+      </div>
+      <div class="custom-options">
+        ${options.map(opt => `
+          <div class="custom-option ${select.value === opt.value ? 'selected' : ''}" data-value="${opt.value}">
+            ${escapeHtml(opt.label)}
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    select.classList.add('custom-select-hidden');
+    select.style.display = 'none';
+    select.parentNode.insertBefore(wrapper, select);
+
+    const trigger = wrapper.querySelector('.custom-select-trigger');
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = wrapper.classList.contains('open');
+      document.querySelectorAll('.custom-select-wrapper').forEach(w => w.classList.remove('open'));
+      if (!isOpen) wrapper.classList.add('open');
+    });
+
+    wrapper.querySelectorAll('.custom-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newVal = opt.getAttribute('data-value');
+        select.value = newVal;
+        trigger.querySelector('span').textContent = opt.textContent.trim();
+        wrapper.querySelectorAll('.custom-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        wrapper.classList.remove('open');
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+  });
+}
+
+// Global click handler to close dropdowns
+document.addEventListener('click', () => {
+  document.querySelectorAll('.custom-select-wrapper').forEach(w => w.classList.remove('open'));
+});
+
+// Auto-run on every navigation and modal
+const originalNavigate = router.navigate;
+router.navigate = function (...args) {
+  return originalNavigate.apply(this, args).then(() => {
+    initCustomSelects();
+  });
+};
+
+const observer = new MutationObserver((mutations) => {
+  mutations.forEach(mutation => {
+    if (mutation.addedNodes.length) {
+      initCustomSelects();
+    }
+  });
+});
+observer.observe(document.body, { childList: true, subtree: true });
 
 function showConfirmModal(title, message) {
   return new Promise((resolve) => {
@@ -225,7 +304,7 @@ function showConfirmModal(title, message) {
       </div>
     `;
     document.body.appendChild(modal);
-    
+
     window.addEventListener('confirmResolved', function handler() {
       window.removeEventListener('confirmResolved', handler);
       resolve(window.confirmResult);
@@ -307,7 +386,7 @@ function toggleSidebar() {
   const sidebar = document.getElementById('adminSidebar');
   const overlay = document.getElementById('sidebarOverlay');
   const hamburger = document.getElementById('hamburgerBtn');
-  
+
   if (sidebar && overlay && hamburger) {
     sidebar.classList.toggle('active');
     overlay.classList.toggle('active');
@@ -318,12 +397,12 @@ function toggleSidebar() {
 // Login Page
 router.on('/admin/login', async () => {
   console.log('Login route triggered, app element:', app);
-  
+
   if (!app) {
     console.error('Admin app element not found!');
     return;
   }
-  
+
   let identity = getIdentity();
 
   // Try to load dynamic identity settings (no auth required for GET)
@@ -353,10 +432,10 @@ router.on('/admin/login', async () => {
           <div class="heading">تسجيل الدخول</div>
           <p class="welcome-text">
             ${escapeHtml(
-              schoolName
-                ? `نظام إدارة المحتوى التعليمي لـ ${schoolName}`
-                : 'نظام إدارة المحتوى التعليمي للمدرسة'
-            )}
+    schoolName
+      ? `نظام إدارة المحتوى التعليمي لـ ${schoolName}`
+      : 'نظام إدارة المحتوى التعليمي للمدرسة'
+  )}
           </p>
             <form id="login-form" class="form">
               <input required class="input" type="text" name="username" id="username" placeholder="اسم المستخدم" />
@@ -413,7 +492,7 @@ router.on('/admin/dashboard', async () => {
       if (dynamicIdentity) {
         window.APP_IDENTITY = dynamicIdentity;
       }
-    } catch (_) {}
+    } catch (_) { }
     const identity = getIdentity();
     const platformLabel = identity.platformLabel || 'المنصة التعليمية';
     const schoolName = identity.schoolName || '';
@@ -476,10 +555,10 @@ router.on('/admin/classes', async () => {
 
     const classes = await adminApi.get('/api/classes');
 
-    const classesHTML = classes.length === 0 
+    const classesHTML = classes.length === 0
       ? '<div class="empty-state" style="padding: 3rem; text-align: center;"><div class="empty-state-icon"><i class="fas fa-book"></i></div><p>لا توجد صفوف دراسية بعد. قم بإنشاء صف دراسي أول!</p></div>'
       : classes.map((cls, index) => `
-          <div class="admin-class-card">
+          <div class="admin-class-card" data-id="${cls.id}">
             <div class="admin-class-card-header">
               <div class="admin-class-card-info">
                 <h3 class="admin-class-card-title">${escapeHtml(cls.name || cls.name_ar)}</h3>
@@ -491,7 +570,7 @@ router.on('/admin/classes', async () => {
             </div>
             <div class="admin-class-card-actions">
               <button type="button" class="btn btn-primary" data-action="edit-class" data-id="${cls.id}" data-name="${escapeHtml((cls.name || cls.name_ar)).replace(/"/g, '&quot;')}" title="تعديل الصف">
-                <i class="fas fa-edit"></i> تعديل
+                <i class="fas fa-edit"></i>
               </button>
               <button type="button" class="btn btn-danger" data-action="delete-class" data-id="${cls.id}" data-name="${escapeHtml((cls.name || cls.name_ar)).replace(/"/g, '&quot;')}" title="حذف الصف">
                 <i class="fas fa-trash"></i>
@@ -506,17 +585,43 @@ router.on('/admin/classes', async () => {
         <button type="button" class="btn btn-primary" data-action="show-create-class"><i class="fas fa-plus"></i> صف جديد</button>
       </div>
       <div class="admin-content">
-        <div class="admin-classes-grid">
+        <div class="admin-classes-grid" id="admin-classes-list">
           ${classesHTML}
         </div>
       </div>
     `, 'classes');
+
+    // Initialize Sortable for Classes
+    setTimeout(() => {
+      const el = document.getElementById('admin-classes-list');
+      if (el && window.Sortable) {
+        new Sortable(el, {
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          delay: 100, // prevent accidental drags on touch
+          delayOnTouchOnly: true,
+          onEnd: async function (evt) {
+            const ids = Array.from(el.children).map(child =>
+              parseInt(child.getAttribute('data-id'))
+            ).filter(id => !isNaN(id));
+
+            try {
+              await adminApi.post('/api/classes/reorder', { order: ids });
+            } catch (e) {
+              console.error('Reorder failed', e);
+              showAlert('فشل تحديث الترتيب', 'error');
+            }
+          }
+        });
+      }
+    }, 50);
   } catch (error) {
     app.innerHTML = adminLayout(`<div class="alert alert-error">Error loading classes</div>`, 'classes');
   }
 });
 
-window.showCreateClassForm = function() {
+window.showCreateClassForm = function () {
   const modal = document.createElement('div');
   modal.className = 'modal active';
   modal.innerHTML = `
@@ -560,7 +665,7 @@ window.showCreateClassForm = function() {
 
   document.getElementById('create-class-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const name = classNameInput.value.trim();
 
     // Client-side validation
@@ -589,7 +694,7 @@ window.showCreateClassForm = function() {
   });
 };
 
-window.editClass = function(id, name) {
+window.editClass = function (id, name) {
   const modal = document.createElement('div');
   modal.className = 'modal active';
   modal.innerHTML = `
@@ -633,7 +738,7 @@ window.editClass = function(id, name) {
 
   document.getElementById('edit-class-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const nameVal = classNameInput.value.trim();
 
     // Client-side validation
@@ -662,14 +767,14 @@ window.editClass = function(id, name) {
   });
 };
 
-window.deleteClass = async function(id, name) {
+window.deleteClass = async function (id, name) {
   const confirmed = await showConfirmModal(
     'حذف الصف الدراسي',
     `<p>هل أنت متأكد من حذف "<strong>${escapeHtml(name)}</strong>"؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> سيتم حذف جميع الوحدات والدروس التابعة لهذا الصف.</p>`
   );
-  
+
   if (!confirmed) return;
-  
+
   try {
     await adminApi.delete(`/api/classes/${id}`);
     router.navigate('/admin/classes');
@@ -679,100 +784,391 @@ window.deleteClass = async function(id, name) {
   }
 };
 
-// Units Management
+// Show Class Units Modal with Terms
+window.showClassTermModal = async function (classId, className) {
+  const modal = document.createElement('div');
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2><i class="fas fa-folder-open"></i> ${escapeHtml(className)}</h2>
+        <button type="button" class="modal-close" data-action="modal-close">×</button>
+      </div>
+      <div style="padding: 1.5rem;">
+        <div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  try {
+    const allUnits = await adminApi.get('/api/units');
+    const classUnits = allUnits.filter(u => u.class_id == classId);
+
+    const term1Units = classUnits.filter(u => u.term == '1' || u.term == 1);
+    const term2Units = classUnits.filter(u => u.term == '2' || u.term == 2);
+
+    const renderUnitRow = (unit, termNum) => `
+      <div class="units-modal-row" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-weight: 600; color: var(--text-color);">${escapeHtml(unit.title || unit.title_ar)}</span>
+          ${unit.category === 'Z' ? '<span style="font-size: 0.75rem; background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 4px;">إثرائي</span>' : ''}
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" class="btn btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml(unit.title || unit.title_ar).replace(/'/g, "\\'")}', ${unit.class_id}, '${unit.category || 'P'}', '${termNum}'); document.querySelector('.modal').remove();" title="تعديل">
+            <i class="fas fa-edit"></i> تعديل
+          </button>
+          <button type="button" class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml(unit.title || unit.title_ar).replace(/'/g, "\\'")}'); document.querySelector('.modal').remove();" title="حذف">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const renderTermSection = (units, termLabel, termNum) => `
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="margin: 0 0 0.75rem 0; padding: 0.75rem 1rem; background: var(--gradient-primary); color: white; border-radius: 8px; font-size: 1rem;">
+          <i class="fas fa-book-open"></i> ${termLabel}
+        </h3>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${units.length === 0
+        ? '<p style="text-align: center; color: var(--light-text); padding: 1rem;">لا توجد وحدات</p>'
+        : units.map(u => renderUnitRow(u, termNum)).join('')}
+        </div>
+      </div>
+    `;
+
+    modal.querySelector('.modal-content').innerHTML = `
+      <div class="modal-header">
+        <h2><i class="fas fa-folder-open"></i> ${escapeHtml(className)}</h2>
+        <button type="button" class="modal-close" data-action="modal-close">×</button>
+      </div>
+      <div style="padding: 1.5rem;">
+        ${renderTermSection(term1Units, 'الفصل الأول', '1')}
+        ${renderTermSection(term2Units, 'الفصل الثاني', '2')}
+        <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+          <button type="button" class="btn btn-primary" onclick="window.showCreateUnitForm(${classId}, null); document.querySelector('.modal').remove();">
+            <i class="fas fa-plus"></i> إنشاء وحدة جديدة
+          </button>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error('Error loading units:', error);
+    modal.querySelector('.modal-content').innerHTML = `
+      <div class="modal-header">
+        <h2>${escapeHtml(className)}</h2>
+        <button type="button" class="modal-close" data-action="modal-close">×</button>
+      </div>
+      <div style="padding: 2rem; text-align: center; color: #ef4444;">
+        <i class="fas fa-exclamation-circle"></i> خطأ في تحميل الوحدات
+      </div>
+    `;
+  }
+};
+
+// Units Management - Comprehensive Dashboard
 router.on('/admin/units', async () => {
   try {
     const identity = getIdentity();
     const platformLabel = identity.platformLabel || 'المنصة التعليمية';
-    const schoolName = identity.schoolName || '';
-    const platformFullTitle = schoolName
-      ? `${platformLabel} - ${schoolName}`
-      : platformLabel;
-    document.title = `الوحدات الدراسية - ${platformFullTitle}`;
+    document.title = `إدارة الوحدات - ${platformLabel}`;
 
-    const [units, classes] = await Promise.all([
+    // Fetch all data in parallel
+    const [classes, allUnits, lessons] = await Promise.all([
+      adminApi.get('/api/classes'),
       adminApi.get('/api/units'),
-      adminApi.get('/api/classes')
+      adminApi.get('/api/lessons')
     ]);
-
     window.availableClasses = classes;
 
-    // Group units by class
-    const unitsByClass = {};
-    units.forEach(unit => {
-      if (!unitsByClass[unit.class_id]) {
-        unitsByClass[unit.class_id] = [];
-      }
-      unitsByClass[unit.class_id].push(unit);
-    });
+    // Calculate stats
+    const totalUnits = allUnits.length;
+    const term1Count = allUnits.filter(u => u.term == '1' || u.term == 1).length;
+    const term2Count = allUnits.filter(u => u.term == '2' || u.term == 2).length;
+    const totalLessons = lessons.length;
 
-    // Create grouped HTML with modern cards
-    let groupedHTML = '';
-    if (classes.length === 0) {
-      groupedHTML = '<div class="alert alert-info">قم بإنشاء صف دراسي أولا قبل إضافة الوحدات.</div>';
-    } else if (units.length === 0) {
-      groupedHTML = '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-folder"></i></div><p>لا توجد وحدات دراسية بعد. قم بإنشاء وحدة دراسية أولى!</p></div>';
-    } else {
-      groupedHTML = classes.map(cls => {
-        const classUnits = unitsByClass[cls.id] || [];
-        
-        if (classUnits.length === 0) return ''; // Skip classes with no units
-        
-        const unitsHTML = classUnits.map((unit, idx) => `
-          <div class="admin-unit-card">
-            <div class="admin-unit-badge">${idx + 1}</div>
-            <div class="admin-unit-main">
-              <h4 class="admin-unit-title">${escapeHtml(unit.title || unit.title_ar)}</h4>
-              <p class="admin-unit-meta">
-                <i class="fas fa-calendar-alt"></i>
-                ${new Date(unit.created_at).toLocaleDateString('ar-SA')}
-              </p>
+    // Build class filter options
+    const classOptions = classes.map(c =>
+      `<option value="${c.id}">${escapeHtml(c.name || c.name_ar)}</option>`
+    ).join('');
+
+    // Render unit row
+    const renderUnitRow = (unit, cls) => {
+      const termNum = unit.term || '1';
+      const unitLessons = lessons.filter(l => l.unit_id == unit.id);
+      return `
+        <tr class="units-table-row" data-id="${unit.id}" data-class-id="${cls.id}" data-term="${termNum}" data-title="${escapeHtml(unit.title || unit.title_ar).toLowerCase()}">
+          <td style="padding: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="fas fa-grip-vertical" style="color: #cbd5e1; cursor: grab;" title="اسحب للترتيب"></i>
+              <span style="font-weight: 700; color: var(--text-color); font-size: 1.05rem;">${escapeHtml(unit.title || unit.title_ar)}</span>
             </div>
-            <div class="admin-unit-buttons">
-              <button type="button" class="btn btn-sm btn-primary" data-action="edit-unit" data-id="${unit.id}" data-title="${escapeHtml((unit.title || unit.title_ar)).replace(/"/g, '&quot;')}" data-class-id="${unit.class_id}" title="تعديل">
-                <i class="fas fa-edit"></i>
+          </td>
+          <td style="padding: 1rem;">
+            <span style="background: ${termNum == '1' ? '#f0fdf4' : '#fdf2f8'}; color: ${termNum == '1' ? '#15803d' : '#be185d'}; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid ${termNum == '1' ? '#bbf7d0' : '#fbcfe8'};">
+              الفصل ${termNum == '1' ? 'الأول' : 'الثاني'}
+            </span>
+          </td>
+          <td style="text-align: center; padding: 1rem;">
+            <a href="javascript:void(0)" onclick="window.router.navigate('/admin/lessons?unitId=${unit.id}')" style="text-decoration: none; color: inherit;">
+              <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #f1f5f9; padding: 0.4rem 0.8rem; border-radius: 8px; transition: all 0.2s; border: 1px solid #e2e8f0;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                <i class="fas fa-Layer-group" style="color: #64748b;"></i>
+                <span style="font-weight: 700;">${unitLessons.length}</span>
+                <span style="font-size: 0.8rem; color: #64748b;">دروس</span>
+              </div>
+            </a>
+          </td>
+          <td style="padding: 1rem;">
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn btn-primary" onclick="editUnit(${unit.id}, '${escapeHtml(unit.title || unit.title_ar).replace(/'/g, "\\'")}', ${unit.class_id}, '${unit.category || 'P'}', '${termNum}')" title="تعديل">
+                <i class="fas fa-edit"></i> تعديل
               </button>
-              <button type="button" class="btn btn-sm btn-danger" data-action="delete-unit" data-id="${unit.id}" data-title="${escapeHtml((unit.title || unit.title_ar)).replace(/"/g, '&quot;')}" title="حذف">
+              <button type="button" class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.id}, '${escapeHtml(unit.title || unit.title_ar).replace(/'/g, "\\'")}')" title="حذف">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
-          </div>
-        `).join('');
+          </td>
+        </tr>
+      `;
+    };
+
+    // Build units grouped by class
+    const renderUnitsByClass = () => {
+      if (classes.length === 0) {
+        return '<div class="empty-state" style="padding: 4rem; text-align: center;"><i class="fas fa-book-open" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;"></i><p>لا توجد صفوف دراسية. قم بإنشاء صف أولاً!</p></div>';
+      }
+
+      return classes.map(cls => {
+        const classUnits = allUnits.filter(u => u.class_id == cls.id);
+        if (classUnits.length === 0) return '';
 
         return `
-          <div class="admin-class-group">
-            <div class="admin-class-header">
-              <i class="fas fa-book"></i>
-              <h3>${escapeHtml(cls.name || cls.name_ar)}</h3>
-              <span class="admin-unit-count">${classUnits.length}</span>
+          <div class="units-class-section" data-class-id="${cls.id}" style="margin-bottom: 2.5rem; background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: var(--shadow);">
+            <div style="background: var(--gradient-primary); color: white; padding: 1.25rem 1.75rem; display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 42px; height: 42px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-graduation-cap" style="font-size: 1.25rem;"></i>
+                </div>
+                <div>
+                  <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em;">${escapeHtml(cls.name || cls.name_ar)}</h3>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.75rem; background: rgba(255,255,255,0.15); padding: 0.5rem 1.25rem; border-radius: 12px; font-weight: 700; font-size: 0.9rem; backdrop-filter: blur(4px);">
+                <span><i class="fas fa-folder" style="margin-left: 0.4rem;"></i> ${classUnits.length} وحدة</span>
+                <span style="opacity: 0.5;">|</span>
+                <span><i class="fas fa-file-alt" style="margin-left: 0.4rem;"></i> ${lessons.filter(l => classUnits.some(u => u.id == l.unit_id)).length} درس</span>
+              </div>
             </div>
-            <div class="admin-units-list">
-              ${unitsHTML}
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+                <thead>
+                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 1rem; text-align: right; width: 40%; color: #64748b; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">عنوان الوحدة</th>
+                    <th style="padding: 1rem; text-align: right; color: #64748b; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">الفصل</th>
+                    <th style="padding: 1rem; text-align: center; color: #64748b; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">محتويات</th>
+                    <th style="padding: 1rem; text-align: right; color: #64748b; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">تحكم</th>
+                  </tr>
+                </thead>
+                <tbody class="sortable-units-body" data-class-id="${cls.id}">
+                  ${classUnits.map(u => renderUnitRow(u, cls)).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
         `;
-      }).join('');
-    }
+      }).filter(html => html).join('');
+    };
+
+    const unitsContent = renderUnitsByClass() || '<div class="empty-state" style="padding: 5rem; text-align: center; background: white; border-radius: 20px;"><i class="fas fa-search" style="font-size: 3.5rem; color: #e2e8f0; margin-bottom: 1.5rem;"></i><p style="font-size: 1.25rem; color: #94a3b8;">لا توجد وحدات مطابقة للبحث. قم بإضافة وحدات جديدة!</p></div>';
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
-        <h1>إدارة الوحدات الدراسية</h1>
-        <button type="button" class="btn btn-primary" data-action="show-create-unit"><i class="fas fa-plus"></i> وحدة جديدة</button>
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+          <div style="width: 60px; height: 60px; background: var(--gradient-primary); border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 10px 20px rgba(30,58,138,0.2);">
+            <i class="fas fa-folder-tree" style="font-size: 1.75rem;"></i>
+          </div>
+          <div>
+            <h1 style="font-size: 2rem; font-weight: 900; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">إدارة الوحدات</h1>
+            <p style="color: #64748b; margin-top: 0.25rem; font-weight: 500;">مركز التحكم بالوحدات التعليمية والمناهج</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" style="padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 12px; box-shadow: 0 8px 16px rgba(30,58,138,0.25);" onclick="window.showCreateUnitForm(null, null)">
+          <i class="fas fa-plus"></i> إنشاء وحدة جديدة
+        </button>
       </div>
-      <div class="admin-content">
-        <div class="admin-grouped-units">
-          ${groupedHTML}
+
+      <div class="admin-content" style="max-width: 1400px; margin: 0 auto;">
+        <!-- Stats Cards Container -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+          <div class="stat-card-premium" style="border-right: 6px solid var(--primary-color);">
+            <div class="value">${totalUnits}</div>
+            <div class="label">إجمالي الوحدات</div>
+          </div>
+          <div class="stat-card-premium" style="border-right: 6px solid #16a34a;">
+            <div class="value">${totalLessons}</div>
+            <div class="label">إجمالي الدروس</div>
+          </div>
+          <div class="stat-card-premium" style="border-right: 6px solid #db2777;">
+            <div class="value">${term1Count}</div>
+            <div class="label">وحدات الفصل الأول</div>
+          </div>
+          <div class="stat-card-premium" style="border-right: 6px solid #9333ea;">
+            <div class="value">${term2Count}</div>
+            <div class="label">وحدات الفصل الثاني</div>
+          </div>
+        </div>
+
+        <!-- Comprehensive Filter & Search -->
+        <div style="background: white; padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center; border: 1px solid #e2e8f0; box-shadow: var(--shadow);">
+          <div class="units-search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="units-search-input" class="units-search-input" placeholder="البحث في عناوين الوحدات (أدخل 3 أحرف على الأقل)..." oninput="filterUnitsDashboard()">
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <span style="font-weight: 700; color: #475569; font-size: 0.95rem;">تصفية:</span>
+            <select id="filter-class" onchange="filterUnitsDashboard()">
+              <option value="">جميع الصفوف</option>
+              ${classOptions}
+            </select>
+            <select id="filter-term" onchange="filterUnitsDashboard()">
+              <option value="">جميع الفصول</option>
+              <option value="1">الفصل الأول</option>
+              <option value="2">الفصل الثاني</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-sm" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0.7rem 1rem; border-radius: 10px;" onclick="resetUnitsFilters()">
+            <i class="fas fa-undo"></i> إعادة ضبط
+          </button>
+        </div>
+
+        <!-- Units by Class List -->
+        <div id="units-dashboard-list">
+          ${unitsContent}
         </div>
       </div>
     `, 'units');
+
+    // Explicitly trigger custom selects after render
+    initCustomSelects();
+
+    // Initialize Sortable for each class section
+    setTimeout(() => {
+      document.querySelectorAll('.sortable-units-body').forEach(el => {
+        if (window.Sortable) {
+          new Sortable(el, {
+            animation: 150,
+            handle: '.fa-grip-vertical',
+            ghostClass: 'sortable-ghost',
+            onEnd: async function (evt) {
+              const ids = Array.from(el.children).map(child => parseInt(child.getAttribute('data-id'))).filter(id => !isNaN(id));
+              try {
+                await adminApi.post('/api/units/reorder', { order: ids });
+                showAlert('تم تحديث الترتيب بنجاح');
+              } catch (e) {
+                showAlert('فشل تحديث الترتيب', 'error');
+              }
+            }
+          });
+        }
+      });
+    }, 100);
+
+    // Handle URL parameters for direct filtering
+    const params = new URLSearchParams(window.location.search);
+    setTimeout(() => {
+      const classIdUrl = params.get('classId');
+      const termUrl = params.get('term');
+      if (classIdUrl || termUrl) {
+        const classSelector = document.getElementById('filter-class');
+        const termSelector = document.getElementById('filter-term');
+        if (classIdUrl && classSelector) classSelector.value = classIdUrl;
+        if (termUrl && termSelector) termSelector.value = termUrl;
+        filterUnitsDashboard();
+      }
+      // Ensure filter runs when custom select changes (in case native change doesn't fire)
+      const filterClassEl = document.getElementById('filter-class');
+      const filterTermEl = document.getElementById('filter-term');
+      const searchInput = document.getElementById('units-search-input');
+      if (filterClassEl) filterClassEl.addEventListener('change', filterUnitsDashboard);
+      if (filterTermEl) filterTermEl.addEventListener('change', filterUnitsDashboard);
+      if (searchInput) searchInput.addEventListener('input', filterUnitsDashboard);
+    }, 150);
+
   } catch (error) {
-    app.innerHTML = adminLayout(`<div class="alert alert-error">Error loading units</div>`, 'units');
+    console.error(error);
+    app.innerHTML = adminLayout(`<div class="alert alert-error">حدث خطأ أثناء تحميل الوحدات: ${error.message}</div>`, 'units');
   }
 });
 
-window.showCreateUnitForm = function() {
-  const classOptions = window.availableClasses.map(cls => 
-    `<option value="${cls.id}">${escapeHtml(cls.name || cls.name_ar)}</option>`
+// Advanced Dashboard Filtering
+window.filterUnitsDashboard = function () {
+  const searchTerm = document.getElementById('units-search-input')?.value?.toLowerCase() || '';
+  const classFilter = document.getElementById('filter-class')?.value || '';
+  const termFilter = document.getElementById('filter-term')?.value || '';
+
+  const classSections = document.querySelectorAll('.units-class-section');
+
+  classSections.forEach(section => {
+    const sectionClassId = section.getAttribute('data-class-id');
+    const rows = section.querySelectorAll('.units-table-row');
+    let visibleRowsCount = 0;
+
+    rows.forEach(row => {
+      const rowTitle = row.getAttribute('data-title');
+      const rowClassId = row.getAttribute('data-class-id');
+      const rowTerm = row.getAttribute('data-term');
+
+      let matchesSearch = searchTerm.length < 3 || rowTitle.includes(searchTerm);
+      let matchesClass = !classFilter || rowClassId === classFilter;
+      let matchesTerm = !termFilter || rowTerm === termFilter;
+
+      if (matchesSearch && matchesClass && matchesTerm) {
+        row.style.display = '';
+        visibleRowsCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Show section only if it has visible rows and matches class filter
+    const matchesSectionClass = !classFilter || sectionClassId === classFilter;
+    if (visibleRowsCount > 0 && matchesSectionClass) {
+      section.style.display = 'block';
+    } else {
+      section.style.display = 'none';
+    }
+  });
+};
+
+window.resetUnitsFilters = function () {
+  const searchInput = document.getElementById('units-search-input');
+  const classSelect = document.getElementById('filter-class');
+  const termSelect = document.getElementById('filter-term');
+
+  if (searchInput) searchInput.value = '';
+  if (classSelect) classSelect.value = '';
+  if (termSelect) termSelect.value = '';
+
+  filterUnitsDashboard();
+};
+
+
+
+window.showCreateUnitForm = async function (preSelectedClassId = null, preSelectedTerm = null) {
+  // We need to fetch classes if they are not available
+  let classes = window.availableClasses;
+  if (!classes || classes.length === 0) {
+    try {
+      classes = await adminApi.get('/api/classes');
+      window.availableClasses = classes;
+    } catch (e) { console.error("Failed to fetch classes", e); classes = []; }
+  }
+
+  const classOptions = classes.map(cls =>
+    `<option value="${cls.id}" ${preSelectedClassId == cls.id ? 'selected' : ''}>${escapeHtml(cls.name || cls.name_ar)}</option>`
   ).join('');
 
   const modal = document.createElement('div');
@@ -791,10 +1187,20 @@ window.showCreateUnitForm = function() {
         </div>
         <div class="form-group">
           <label for="unit-class">الصف الدراسي *</label>
-          <select id="unit-class" required>
+          <select id="unit-class" required ${preSelectedClassId ? 'disabled' : ''}>
             <option value="">اختر صفا دراسيا...</option>
             ${classOptions}
           </select>
+          ${preSelectedClassId ? `<input type="hidden" id="unit-class-hidden" value="${preSelectedClassId}">` : ''}
+        </div>
+        <div class="form-group">
+          <label for="unit-term">الترم الدراسي *</label>
+          <select id="unit-term" required ${preSelectedTerm ? 'disabled' : ''}>
+            <option value="">اختر الترم...</option>
+            <option value="1" ${preSelectedTerm == '1' ? 'selected' : ''}>الترم الأول</option>
+            <option value="2" ${preSelectedTerm == '2' ? 'selected' : ''}>الترم الثاني</option>
+          </select>
+          ${preSelectedTerm ? `<input type="hidden" id="unit-term-hidden" value="${preSelectedTerm}">` : ''}
         </div>
         <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="unit-error">
           <i class="fas fa-exclamation-circle"></i> <span id="unit-error-msg"></span>
@@ -825,9 +1231,11 @@ window.showCreateUnitForm = function() {
 
   document.getElementById('create-unit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const title = titleInput.value.trim();
-    const classId = document.getElementById('unit-class').value;
+    const classId = preSelectedClassId || document.getElementById('unit-class').value;
+    const term = preSelectedTerm || document.getElementById('unit-term').value;
+    const category = 'P';
 
     if (!title) {
       errorDiv.style.display = 'block';
@@ -839,6 +1247,11 @@ window.showCreateUnitForm = function() {
       errorMsg.textContent = 'الصف الدراسي مطلوب';
       return;
     }
+    if (!term) {
+      errorDiv.style.display = 'block';
+      errorMsg.textContent = 'الترم الدراسي مطلوب';
+      return;
+    }
 
     const arabicPattern = /^[\u0600-\u06FF\s]+$/;
     if (!arabicPattern.test(title)) {
@@ -848,12 +1261,10 @@ window.showCreateUnitForm = function() {
     }
 
     try {
-      await adminApi.post('/api/units', {
-        title,
-        class_id: classId
-      });
+      await adminApi.post('/api/units', { title, class_id: classId, category, term });
       modal.remove();
-      router.navigate('/admin/units');
+      // Navigate to the correct context including term
+      router.navigate(`/admin/units?classId=${classId}&term=${term}`);
       showAlert('تم إضافة الوحدة بنجاح!');
     } catch (error) {
       errorDiv.style.display = 'block';
@@ -862,8 +1273,8 @@ window.showCreateUnitForm = function() {
   });
 };
 
-window.editUnit = function(id, title, classId) {
-  const classOptions = window.availableClasses.map(cls => 
+window.editUnit = function (id, title, classId, category = 'P', term = '1') {
+  const classOptions = window.availableClasses.map(cls =>
     `<option value="${cls.id}" ${cls.id === classId ? 'selected' : ''}>${escapeHtml(cls.name || cls.name_ar)}</option>`
   ).join('');
 
@@ -885,6 +1296,13 @@ window.editUnit = function(id, title, classId) {
           <label for="edit-unit-class">الصف الدراسي *</label>
           <select id="edit-unit-class" required>
             ${classOptions}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-unit-term">الترم الدراسي *</label>
+          <select id="edit-unit-term" required>
+            <option value="1" ${term == '1' ? 'selected' : ''}>الترم الأول</option>
+            <option value="2" ${term == '2' ? 'selected' : ''}>الترم الثاني</option>
           </select>
         </div>
         <div style="color: #ef4444; margin: 1rem 0; padding: 0.75rem; background: #fee2e2; border-radius: 4px; display: none;" id="edit-unit-error">
@@ -916,9 +1334,11 @@ window.editUnit = function(id, title, classId) {
 
   document.getElementById('edit-unit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const titleVal = titleInput.value.trim();
     const classIdVal = document.getElementById('edit-unit-class').value;
+    const termVal = document.getElementById('edit-unit-term').value;
+    const categoryVal = 'P';
 
     if (!titleVal) {
       errorDiv.style.display = 'block';
@@ -936,10 +1356,12 @@ window.editUnit = function(id, title, classId) {
     try {
       await adminApi.put(`/api/units/${id}`, {
         title: titleVal,
-        class_id: classIdVal
+        class_id: classIdVal,
+        category: categoryVal,
+        term: termVal
       });
       modal.remove();
-      router.navigate('/admin/units');
+      router.navigate(`/admin/units?classId=${classIdVal}`);
       showAlert('تم تحديث الوحدة بنجاح!');
     } catch (error) {
       errorDiv.style.display = 'block';
@@ -948,88 +1370,226 @@ window.editUnit = function(id, title, classId) {
   });
 };
 
-window.deleteUnit = async function(id, title) {
+window.deleteUnit = async function (id, title) {
   const confirmed = await showConfirmModal(
     'حذف الوحدة الدراسية',
     `<p>هل أنت متأكد من حذف "<strong>${escapeHtml(title)}</strong>"؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> سيتم حذف جميع الدروس التابعة لهذه الوحدة.</p>`
   );
-  
+
   if (!confirmed) return;
-  
+
   try {
     await adminApi.delete(`/api/units/${id}`);
-    router.navigate('/admin/units');
+    const params = new URLSearchParams(window.location.search);
+    const classId = params.get('classId');
+    if (classId) {
+      router.navigate(`/admin/units?classId=${classId}`);
+    } else {
+      router.navigate('/admin/units');
+    }
     showAlert('تم حذف الوحدة بنجاح!');
   } catch (error) {
     showAlert(error.message, 'error');
   }
 };
 
-// Lessons Management
+// Lessons Management - Comprehensive Dashboard
 router.on('/admin/lessons', async () => {
   try {
+    const params = new URLSearchParams(window.location.search);
+    const unitIdUrl = params.get('unitId');
+
     const identity = getIdentity();
     const platformLabel = identity.platformLabel || 'المنصة التعليمية';
-    const schoolName = identity.schoolName || '';
-    const platformFullTitle = schoolName
-      ? `${platformLabel} - ${schoolName}`
-      : platformLabel;
-    document.title = `إدارة الدروس - ${platformFullTitle}`;
+    document.title = `إدارة الدروس - ${platformLabel}`;
 
-    const [lessons, units] = await Promise.all([
+    // Fetch all required data
+    const [lessons, units, classes] = await Promise.all([
       adminApi.get('/api/lessons'),
-      adminApi.get('/api/units')
+      adminApi.get('/api/units'),
+      adminApi.get('/api/classes')
     ]);
 
     window.availableUnits = units;
+    window.availableClasses = classes;
 
-    // Create modern admin cards with action buttons
-    const lessonsHTML = lessons.length === 0 
-      ? '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><p>لا توجد دروس بعد. قم بإنشاء درس أول!</p></div>'
-      : lessons.map((lesson, index) => `
-          <div class="admin-lesson-card">
-            <div class="admin-card-header">
-              <div class="admin-card-number">${index + 1}</div>
-              <div class="admin-card-info">
-                <h3 class="admin-card-title">${escapeHtml(lesson.title || lesson.title_ar)}</h3>
-                <p class="admin-card-meta">
-                  <span class="admin-badge-unit">${escapeHtml(lesson.unit_title)}</span>
-                  <span class="admin-badge-class">${escapeHtml(lesson.class_name)}</span>
-                </p>
-              </div>
+    // Calculate stats
+    const totalLessons = lessons.length;
+    const term1Count = lessons.filter(l => l.term == '1' || l.term == 1).length;
+    const term2Count = lessons.filter(l => l.term == '2' || l.term == 2).length;
+
+    // Build filter options
+    const classOptions = classes.map(c => `<option value="${c.id}">${escapeHtml(c.name || c.name_ar)}</option>`).join('');
+    const unitOptions = units.map(u => `<option value="${u.id}">${escapeHtml(u.title || u.title_ar)}</option>`).join('');
+
+    // Render individual lesson row
+    const renderLessonRow = (lesson) => {
+      const termNum = lesson.term || '1';
+      return `
+        <tr class="lessons-table-row" data-id="${lesson.id}" data-class-id="${lesson.class_id}" data-unit-id="${lesson.unit_id}" data-term="${termNum}" data-title="${escapeHtml(lesson.title || lesson.title_ar).toLowerCase()}">
+          <td style="padding: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+               <div style="width: 32px; height: 32px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b;">
+                 <i class="fas fa-file-alt" style="font-size: 0.9rem;"></i>
+               </div>
+               <span style="font-weight: 700; color: var(--text-color);">${escapeHtml(lesson.title || lesson.title_ar)}</span>
             </div>
-            <div class="admin-card-date">
-              <i class="fas fa-calendar-alt"></i>
-              ${new Date(lesson.created_at).toLocaleDateString('ar-SA')}
-            </div>
-            <div class="admin-card-actions">
-              <button type="button" class="btn btn-sm btn-primary" data-action="edit-lesson" data-id="${lesson.id}" title="تعديل الدرس">
+          </td>
+          <td style="padding: 1rem;">
+            <span style="background: #eff6ff; color: #1e40af; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #dbeafe;">
+              ${escapeHtml(lesson.unit_title)}
+            </span>
+          </td>
+          <td style="padding: 1rem;">
+            <span style="background: ${termNum == '1' ? '#f0fdf4' : '#fdf2f8'}; color: ${termNum == '1' ? '#15803d' : '#be185d'}; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid ${termNum == '1' ? '#bbf7d0' : '#fbcfe8'};">
+              الفصل ${termNum == '1' ? 'الأول' : 'الثاني'}
+            </span>
+          </td>
+          <td style="padding: 1rem;">
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" class="btn btn-sm btn-primary" data-action="edit-lesson" data-id="${lesson.id}" title="تعديل">
                 <i class="fas fa-edit"></i> تعديل
               </button>
-              <button type="button" class="btn btn-sm btn-info" data-action="manage-questions" data-id="${lesson.id}" data-title="${escapeHtml((lesson.title || lesson.title_ar)).replace(/"/g, '&quot;')}" title="إدارة الأسئلة">
-                <i class="fas fa-question-circle"></i> أسئلة
+              <button type="button" class="btn btn-sm btn-info" data-action="manage-questions" data-id="${lesson.id}" data-title="${escapeHtml((lesson.title || lesson.title_ar)).replace(/"/g, '&quot;')}" title="الأسئلة">
+                <i class="fas fa-question-circle"></i> الأسئلة
               </button>
-              <button type="button" class="btn btn-sm btn-danger" data-action="delete-lesson" data-id="${lesson.id}" data-title="${escapeHtml((lesson.title || lesson.title_ar)).replace(/"/g, '&quot;')}" title="حذف الدرس">
-                <i class="fas fa-trash"></i> حذف
+              <button type="button" class="btn btn-sm btn-danger" data-action="delete-lesson" data-id="${lesson.id}" data-title="${escapeHtml((lesson.title || lesson.title_ar)).replace(/"/g, '&quot;')}" title="حذف">
+                <i class="fas fa-trash"></i>
               </button>
             </div>
+          </td>
+        </tr>
+      `;
+    };
+
+    // Grouping by Class logic
+    const renderLessonsByClass = () => {
+      if (classes.length === 0) return '';
+
+      return classes.map(cls => {
+        const classLessons = lessons.filter(l => l.class_id == cls.id);
+        if (classLessons.length === 0) return '';
+
+        return `
+          <div class="lessons-class-section" data-class-id="${cls.id}" style="margin-bottom: 2.5rem; background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: var(--shadow);">
+            <div style="background: var(--gradient-primary); color: white; padding: 1.25rem 1.75rem; display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 42px; height: 42px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-layer-group" style="font-size: 1.25rem;"></i>
+                </div>
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800;">${escapeHtml(cls.name || cls.name_ar)}</h3>
+              </div>
+              <div style="display: flex; gap: 0.75rem; background: rgba(255,255,255,0.15); padding: 0.5rem 1.25rem; border-radius: 12px; font-weight: 700; font-size: 0.9rem; backdrop-filter: blur(4px);">
+                <span><i class="fas fa-file-alt" style="margin-left: 0.4rem;"></i> ${classLessons.length} درس</span>
+              </div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                <thead>
+                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 1rem; text-align: right; color: #64748b; font-weight: 700; font-size: 0.85rem;">عنوان الدرس</th>
+                    <th style="padding: 1rem; text-align: right; color: #64748b; font-weight: 700; font-size: 0.85rem;">الوحدة</th>
+                    <th style="padding: 1rem; text-align: right; color: #64748b; font-weight: 700; font-size: 0.85rem;">الفصل</th>
+                    <th style="padding: 1rem; text-align: left; color: #64748b; font-weight: 700; font-size: 0.85rem;">تحكم</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${classLessons.map(renderLessonRow).join('')}
+                </tbody>
+              </table>
+            </div>
           </div>
-        `).join('');
+        `;
+      }).join('');
+    };
+
+    const lessonsContent = renderLessonsByClass() || '<div class="empty-state" style="padding: 5rem; text-align: center; background: white; border-radius: 20px;"><i class="fas fa-search" style="font-size: 3.5rem; color: #e2e8f0; margin-bottom: 1.5rem;"></i><p style="font-size: 1.25rem; color: #94a3b8;">لا توجد دروس مطابقة. قم بإضافة دروس جديدة!</p></div>';
 
     app.innerHTML = adminLayout(`
       <div class="admin-header">
-        <h1>إدارة الدروس</h1>
-        <button type="button" class="btn btn-primary" data-action="show-create-lesson"><i class="fas fa-plus"></i> درس جديد</button>
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+          <div style="width: 60px; height: 60px; background: var(--gradient-primary); border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 10px 20px rgba(30,58,138,0.2);">
+            <i class="fas fa-file-waveform" style="font-size: 1.75rem;"></i>
+          </div>
+          <div>
+            <h1 style="font-size: 2rem; font-weight: 900; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">إدارة الدروس</h1>
+            <p style="color: #64748b; margin-top: 0.25rem; font-weight: 500;">التحكم في المحتوى التعليمي والدروس التفاعلية</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" style="padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 12px;" data-action="show-create-lesson">
+          <i class="fas fa-plus"></i> إنشاء درس جديد
+        </button>
       </div>
-      <div class="admin-content">
-        ${units.length === 0 ? '<div class="alert alert-info">قم بإنشاء وحدة دراسية أولا قبل إضافة الدروس.</div>' : ''}
-        <div class="admin-lessons-grid">
-          ${lessonsHTML}
+
+      <div class="admin-content" style="max-width: 1400px; margin: 0 auto;">
+        <!-- Stats Dashboard -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+          <div class="stat-card-premium" style="border-right: 6px solid var(--primary-color);">
+            <div class="value">${totalLessons}</div>
+            <div class="label">إجمالي الدروس</div>
+          </div>
+          <div class="stat-card-premium" style="border-right: 6px solid #16a34a;">
+            <div class="value">${term1Count}</div>
+            <div class="label">دروس الفصل الأول</div>
+          </div>
+          <div class="stat-card-premium" style="border-right: 6px solid #db2777;">
+            <div class="value">${term2Count}</div>
+            <div class="label">دروس الفصل الثاني</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div style="background: white; padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center; border: 1px solid #e2e8f0; box-shadow: var(--shadow);">
+          <div class="units-search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="lessons-search-input" class="units-search-input" placeholder="البحث في عناوين الدروس (3 أحرف على الأقل)..." oninput="filterLessonsDashboard()">
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <span style="font-weight: 700; color: #475569; font-size: 0.95rem;">تصفية:</span>
+            <select id="filter-lesson-class" onchange="filterLessonsDashboard()">
+              <option value="">جميع الصفوف</option>
+              ${classOptions}
+            </select>
+            <select id="filter-lesson-term" onchange="filterLessonsDashboard()">
+              <option value="">جميع الفصول</option>
+              <option value="1">الفصل الأول</option>
+              <option value="2">الفصل الثاني</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-sm" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0.7rem 1rem; border-radius: 10px;" onclick="resetLessonsFilters()">
+            <i class="fas fa-undo"></i> إعادة ضبط
+          </button>
+        </div>
+
+        <div id="lessons-dashboard-list">
+          ${lessonsContent}
         </div>
       </div>
     `, 'lessons');
+
+    // Trigger custom selects and URL filtering
+    initCustomSelects();
+
+    setTimeout(() => {
+      if (unitIdUrl) {
+        // Find unit in units array
+        const unit = units.find(u => u.id == unitIdUrl);
+        if (unit) {
+          const classSelector = document.getElementById('filter-lesson-class');
+          const termSelector = document.getElementById('filter-lesson-term');
+          if (classSelector) classSelector.value = unit.class_id;
+          if (termSelector) termSelector.value = unit.term;
+          // Apply filters
+          filterLessonsDashboard();
+        }
+      }
+    }, 100);
+
   } catch (error) {
-    app.innerHTML = adminLayout(`<div class="alert alert-error">Error loading lessons</div>`, 'lessons');
+    console.error(error);
+    app.innerHTML = adminLayout(`<div class="alert alert-error">حدث خطأ أثناء تحميل الدروس</div>`, 'lessons');
   }
 });
 
@@ -1065,8 +1625,8 @@ router.on('/admin/settings', async () => {
           <div class="form-group">
             <label for="school-name"><i class="fas fa-school"></i> اسم المدرسة *</label>
             <input type="text" id="school-name" required value="${escapeHtml(
-              identity.schoolName || ''
-            )}" dir="rtl" />
+        identity.schoolName || ''
+      )}" dir="rtl" />
             <small style="color: #64748b;">
               مثال: مدرسة أبو فراس الحمداني للتعليم الأساسي
             </small>
@@ -1075,8 +1635,8 @@ router.on('/admin/settings', async () => {
           <div class="form-group">
             <label for="platform-label"><i class="fas fa-globe-asia"></i> اسم المنصة *</label>
             <input type="text" id="platform-label" required value="${escapeHtml(
-              identity.platformLabel || 'المنصة التعليمية'
-            )}" dir="rtl" />
+        identity.platformLabel || 'المنصة التعليمية'
+      )}" dir="rtl" />
             <small style="color: #64748b;">
               يظهر قبل اسم المدرسة في العناوين، مثل: المنصة التعليمية - اسم المدرسة
             </small>
@@ -1085,8 +1645,8 @@ router.on('/admin/settings', async () => {
           <div class="form-group">
             <label for="admin-name"><i class="fas fa-users-cog"></i> جهة الإدارة المعروضة *</label>
             <input type="text" id="admin-name" required value="${escapeHtml(
-              identity.adminName || 'إدارة المدرسة'
-            )}" dir="rtl" />
+        identity.adminName || 'إدارة المدرسة'
+      )}" dir="rtl" />
             <small style="color: #64748b;">
               يفضّل استخدام صياغة مؤسسية مثل: إدارة المدرسة / شؤون الطلاب، وليس اسم شخص.
             </small>
@@ -1095,8 +1655,8 @@ router.on('/admin/settings', async () => {
           <div class="form-group">
             <label for="admin-role"><i class="fas fa-id-badge"></i> وصف جهة الإدارة *</label>
             <input type="text" id="admin-role" required value="${escapeHtml(
-              identity.adminRole || 'مسؤول النظام التعليمي'
-            )}" dir="rtl" />
+        identity.adminRole || 'مسؤول النظام التعليمي'
+      )}" dir="rtl" />
             <small style="color: #64748b;">
               يظهر كتوضيح لدور الإدارة، مثل: مسؤول النظام التعليمي.
             </small>
@@ -1168,8 +1728,60 @@ router.on('/admin/settings', async () => {
   }
 });
 
-window.showCreateLessonForm = function() {
-  const unitOptions = window.availableUnits.map(unit => 
+// Advanced Lessons Dashboard Filtering
+window.filterLessonsDashboard = function () {
+  const searchTerm = document.getElementById('lessons-search-input')?.value?.toLowerCase() || '';
+  const classFilter = document.getElementById('filter-lesson-class')?.value || '';
+  const termFilter = document.getElementById('filter-lesson-term')?.value || '';
+
+  const classSections = document.querySelectorAll('.lessons-class-section');
+
+  classSections.forEach(section => {
+    const sectionClassId = section.getAttribute('data-class-id');
+    const rows = section.querySelectorAll('.lessons-table-row');
+    let visibleRowsCount = 0;
+
+    rows.forEach(row => {
+      const rowTitle = row.getAttribute('data-title');
+      const rowClassId = row.getAttribute('data-class-id');
+      const rowTerm = row.getAttribute('data-term');
+
+      let matchesSearch = searchTerm.length < 3 || rowTitle.includes(searchTerm);
+      let matchesClass = !classFilter || rowClassId === classFilter;
+      let matchesTerm = !termFilter || rowTerm === termFilter;
+
+      if (matchesSearch && matchesClass && matchesTerm) {
+        row.style.display = '';
+        visibleRowsCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Show section only if it has visible rows and matches filters
+    const matchesSectionClass = !classFilter || sectionClassId === classFilter;
+    if (visibleRowsCount > 0 && matchesSectionClass) {
+      section.style.display = 'block';
+    } else {
+      section.style.display = 'none';
+    }
+  });
+};
+
+window.resetLessonsFilters = function () {
+  const searchInput = document.getElementById('lessons-search-input');
+  const classSelect = document.getElementById('filter-lesson-class');
+  const termSelect = document.getElementById('filter-lesson-term');
+
+  if (searchInput) searchInput.value = '';
+  if (classSelect) classSelect.value = '';
+  if (termSelect) termSelect.value = '';
+
+  filterLessonsDashboard();
+};
+
+window.showCreateLessonForm = function () {
+  const unitOptions = window.availableUnits.map(unit =>
     `<option value="${unit.id}">${escapeHtml(unit.title || unit.title_ar)} (${escapeHtml(unit.class_name)})</option>`
   ).join('');
 
@@ -1265,7 +1877,7 @@ window.showCreateLessonForm = function() {
     try {
       const videos = [];
       const videoElements = document.querySelectorAll('#videos-container [data-video-index]');
-      
+
       videoElements.forEach(el => {
         const url = el.querySelector('input[type="url"]').value;
         if (url) {
@@ -1280,7 +1892,7 @@ window.showCreateLessonForm = function() {
 
       const images = [];
       const imageElements = document.querySelectorAll('#images-container [data-image-index]');
-      
+
       imageElements.forEach(el => {
         const imagePath = el.getAttribute('data-image-path');
         if (imagePath) {
@@ -1310,10 +1922,10 @@ window.showCreateLessonForm = function() {
   });
 };
 
-window.addVideoField = function() {
+window.addVideoField = function () {
   const container = document.getElementById('videos-container');
   if (!container) return;
-  
+
   const index = window.videoFieldCount++;
   const videoField = document.createElement('div');
   videoField.setAttribute('data-video-index', index);
@@ -1336,10 +1948,10 @@ window.addVideoField = function() {
   container.appendChild(videoField);
 };
 
-window.addImageField = function(imagePath = '', position = 'bottom', size = 'medium', caption = '') {
+window.addImageField = function (imagePath = '', position = 'bottom', size = 'medium', caption = '') {
   const container = document.getElementById('images-container');
   if (!container) return;
-  
+
   const index = window.imageFieldCount++;
   const imageField = document.createElement('div');
   imageField.setAttribute('data-image-index', index);
@@ -1366,7 +1978,7 @@ window.addImageField = function(imagePath = '', position = 'bottom', size = 'med
   container.appendChild(imageField);
 };
 
-window.uploadImage = async function(input, event) {
+window.uploadImage = async function (input, event) {
   const file = input.files[0];
   if (!file) return;
 
@@ -1393,7 +2005,7 @@ window.uploadImage = async function(input, event) {
 
     const imageField = input.closest('[data-image-index]');
     imageField.setAttribute('data-image-path', data.imagePath);
-    
+
     // Add preview
     let preview = imageField.querySelector('div[style*="background: white"]');
     if (!preview) {
@@ -1402,7 +2014,7 @@ window.uploadImage = async function(input, event) {
       input.parentNode.insertBefore(preview, input.nextSibling);
     }
     preview.innerHTML = `<img src="${data.imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">`;
-    
+
     showAlert('تم رفع الصورة بنجاح!');
   } catch (error) {
     console.error('Image upload error:', error);
@@ -1410,16 +2022,16 @@ window.uploadImage = async function(input, event) {
   }
 };
 
-window.editLesson = async function(id) {
+window.editLesson = async function (id) {
   try {
     const lesson = await adminApi.get(`/api/lessons/${id}`);
-    
+
     // Make sure availableUnits is loaded, if not fetch it
     if (!window.availableUnits) {
       window.availableUnits = await adminApi.get('/api/units');
     }
-    
-    const unitOptions = window.availableUnits.map(unit => 
+
+    const unitOptions = window.availableUnits.map(unit =>
       `<option value="${unit.id}" ${unit.id === lesson.unit_id ? 'selected' : ''}>${escapeHtml(unit.title || unit.title_ar)} (${escapeHtml(unit.class_name)})</option>`
     ).join('');
 
@@ -1526,7 +2138,7 @@ window.editLesson = async function(id) {
       try {
         const videos = [];
         const videoElements = document.querySelectorAll('#edit-videos-container [data-video-index]');
-        
+
         videoElements.forEach(el => {
           const url = el.querySelector('input[type="url"]').value;
           if (url && url.trim()) {
@@ -1541,7 +2153,7 @@ window.editLesson = async function(id) {
 
         const images = [];
         const imageElements = document.querySelectorAll('#edit-images-container [data-image-index]');
-        
+
         imageElements.forEach(el => {
           const imagePath = el.getAttribute('data-image-path');
           const caption = el.querySelector('textarea').value;
@@ -1597,14 +2209,14 @@ window.editLesson = async function(id) {
   }
 };
 
-window.deleteLesson = async function(id, title) {
+window.deleteLesson = async function (id, title) {
   const confirmed = await showConfirmModal(
     'حذف الدرس',
     `<p>هل أنت متأكد من حذف "<strong>${escapeHtml(title)}</strong>"؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> لا يمكن التراجع عن هذا الإجراء.</p>`
   );
-  
+
   if (!confirmed) return;
-  
+
   try {
     await adminApi.delete(`/api/lessons/${id}`);
     router.navigate('/admin/lessons');
@@ -1631,10 +2243,10 @@ if (document.readyState === 'loading') {
   router.handleRoute();
 }
 
-window.addEditVideoField = function(url = '', position = 'bottom', size = 'medium', explanation = '') {
+window.addEditVideoField = function (url = '', position = 'bottom', size = 'medium', explanation = '') {
   const container = document.getElementById('edit-videos-container');
   if (!container) return;
-  
+
   const index = window.editVideoFieldCount++;
   const videoField = document.createElement('div');
   videoField.setAttribute('data-video-index', index);
@@ -1657,10 +2269,10 @@ window.addEditVideoField = function(url = '', position = 'bottom', size = 'mediu
   container.appendChild(videoField);
 };
 
-window.addEditImageField = function(imagePath = '', position = 'bottom', size = 'medium', caption = '') {
+window.addEditImageField = function (imagePath = '', position = 'bottom', size = 'medium', caption = '') {
   const container = document.getElementById('edit-images-container');
   if (!container) return;
-  
+
   const index = window.editImageFieldCount++;
   const imageField = document.createElement('div');
   imageField.setAttribute('data-image-index', index);
@@ -1687,7 +2299,7 @@ window.addEditImageField = function(imagePath = '', position = 'bottom', size = 
   container.appendChild(imageField);
 };
 
-window.uploadEditImage = async function(input, event) {
+window.uploadEditImage = async function (input, event) {
   const file = input.files[0];
   if (!file) return;
 
@@ -1707,7 +2319,7 @@ window.uploadEditImage = async function(input, event) {
     const data = await safeParseJson(response);
     const imageField = input.closest('[data-image-index]');
     imageField.setAttribute('data-image-path', data.imagePath);
-    
+
     // Add preview
     let preview = imageField.querySelector('div[style*="background: white"]');
     if (!preview) {
@@ -1716,7 +2328,7 @@ window.uploadEditImage = async function(input, event) {
       input.parentNode.insertBefore(preview, input.nextSibling);
     }
     preview.innerHTML = `<img src="${data.imagePath}" style="max-width: 100%; max-height: 150px; border-radius: 4px;">`;
-    
+
     showAlert('تم رفع الصورة بنجاح!');
   } catch (error) {
     showAlert('خطأ في رفع الصورة: ' + error.message, 'error');
@@ -1725,10 +2337,10 @@ window.uploadEditImage = async function(input, event) {
 
 // ==================== QUESTIONS MANAGEMENT ====================
 
-window.manageQuestions = async function(lessonId, lessonTitle) {
+window.manageQuestions = async function (lessonId, lessonTitle) {
   try {
     const questions = await adminApi.get(`/api/lessons/${lessonId}/questions/admin`);
-    
+
     const modal = document.createElement('div');
     modal.className = 'modal active';
     modal.id = 'questions-modal';
@@ -1740,10 +2352,10 @@ window.manageQuestions = async function(lessonId, lessonTitle) {
           </div>
           <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
           <div class="questions-list-admin" id="questions-list-admin">
-            ${questions.length === 0 
-              ? '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>'
-              : questions.map((q, idx) => renderQuestionAdmin(q, idx, lessonId)).join('')
-            }
+            ${questions.length === 0
+        ? '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>'
+        : questions.map((q, idx) => renderQuestionAdmin(q, idx, lessonId)).join('')
+      }
           </div>
           <div class="add-question-section" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0;">
             <h4 style="margin-bottom: 1rem;"><i class="fas fa-plus-circle"></i> إضافة سؤال جديد</h4>
@@ -1827,19 +2439,19 @@ function renderQuestionAdmin(q, idx, lessonId) {
   `;
 }
 
-window.addQuestion = async function(lessonId) {
+window.addQuestion = async function (lessonId) {
   const questionText = document.getElementById('new-q-text').value.trim();
   const optionA = document.getElementById('new-q-a').value.trim();
   const optionB = document.getElementById('new-q-b').value.trim();
   const optionC = document.getElementById('new-q-c').value.trim();
   const optionD = document.getElementById('new-q-d').value.trim();
   const correctAnswer = document.getElementById('new-q-correct').value;
-  
+
   if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
     showAlert('جميع الحقول مطلوبة', 'error');
     return;
   }
-  
+
   try {
     await adminApi.post(`/api/lessons/${lessonId}/questions`, {
       question_text: questionText,
@@ -1849,9 +2461,9 @@ window.addQuestion = async function(lessonId) {
       option_d: optionD,
       correct_answer: correctAnswer
     });
-    
+
     showAlert('تم إضافة السؤال بنجاح!');
-    
+
     // Refresh the modal
     document.getElementById('questions-modal').remove();
     const lessonTitle = document.querySelector('.modal-header h2')?.textContent.split(': ')[1] || '';
@@ -1861,7 +2473,7 @@ window.addQuestion = async function(lessonId) {
   }
 };
 
-window.editQuestion = async function(questionId, lessonId) {
+window.editQuestion = async function (questionId, lessonId) {
   try {
     const questions = await adminApi.get(`/api/lessons/${lessonId}/questions/admin`);
     const q = questions.find(question => question.id === questionId);
@@ -1869,7 +2481,7 @@ window.editQuestion = async function(questionId, lessonId) {
       showAlert('السؤال غير موجود', 'error');
       return;
     }
-    
+
     const editModal = document.createElement('div');
     editModal.className = 'modal active';
     editModal.style.zIndex = '10001';
@@ -1926,19 +2538,19 @@ window.editQuestion = async function(questionId, lessonId) {
   }
 };
 
-window.saveQuestionEdit = async function(questionId, lessonId) {
+window.saveQuestionEdit = async function (questionId, lessonId) {
   const questionText = document.getElementById('edit-q-text').value.trim();
   const optionA = document.getElementById('edit-q-a').value.trim();
   const optionB = document.getElementById('edit-q-b').value.trim();
   const optionC = document.getElementById('edit-q-c').value.trim();
   const optionD = document.getElementById('edit-q-d').value.trim();
   const correctAnswer = document.getElementById('edit-q-correct').value;
-  
+
   if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
     showAlert('جميع الحقول مطلوبة', 'error');
     return;
   }
-  
+
   try {
     await adminApi.put(`/api/lessons/${lessonId}/questions/${questionId}`, {
       question_text: questionText,
@@ -1948,19 +2560,19 @@ window.saveQuestionEdit = async function(questionId, lessonId) {
       option_d: optionD,
       correct_answer: correctAnswer
     });
-    
+
     showAlert('تم تحديث السؤال بنجاح!');
-    
+
     // Close edit modal
     document.querySelectorAll('.modal').forEach(m => {
       if (m.style.zIndex === '10001') m.remove();
     });
-    
+
     // Refresh the questions list
     const questions = await adminApi.get(`/api/lessons/${lessonId}/questions/admin`);
     const listContainer = document.getElementById('questions-list-admin');
     if (listContainer) {
-      listContainer.innerHTML = questions.length === 0 
+      listContainer.innerHTML = questions.length === 0
         ? '<div class="empty-questions"><i class="fas fa-clipboard-list" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i><p>لا توجد أسئلة لهذا الدرس بعد</p></div>'
         : questions.map((q, idx) => renderQuestionAdmin(q, idx, lessonId)).join('');
     }
@@ -1969,22 +2581,22 @@ window.saveQuestionEdit = async function(questionId, lessonId) {
   }
 };
 
-window.deleteQuestion = async function(questionId, lessonId) {
+window.deleteQuestion = async function (questionId, lessonId) {
   const confirmed = await showConfirmModal(
     'حذف السؤال',
     '<p>هل أنت متأكد من حذف هذا السؤال؟</p><p style="color: #ef4444; margin-top: 0.5rem; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> لا يمكن التراجع عن هذا الإجراء.</p>'
   );
-  
+
   if (!confirmed) return;
-  
+
   try {
     await adminApi.delete(`/api/lessons/${lessonId}/questions/${questionId}`);
     showAlert('تم حذف السؤال بنجاح!');
-    
+
     // Remove the question card from DOM
     const card = document.getElementById(`admin-q-${questionId}`);
     if (card) card.remove();
-    
+
     // Check if there are no more questions
     const listContainer = document.getElementById('questions-list-admin');
     if (listContainer && listContainer.children.length === 0) {
@@ -2052,11 +2664,17 @@ document.addEventListener('click', (e) => {
     if (id) deleteClass(parseInt(id, 10), name);
     return;
   }
+  if (action === 'view-class-units') {
+    const id = el.getAttribute('data-id');
+    if (id) router.navigate(`/admin/units?classId=${id}`);
+    return;
+  }
   if (action === 'edit-unit') {
     const id = el.getAttribute('data-id');
     const title = el.getAttribute('data-title') || '';
     const classId = el.getAttribute('data-class-id');
-    if (id && classId) editUnit(parseInt(id, 10), title, parseInt(classId, 10));
+    const category = el.getAttribute('data-category') || 'P';
+    if (id && classId) editUnit(parseInt(id, 10), title, parseInt(classId, 10), category);
     return;
   }
   if (action === 'delete-unit') {
@@ -2132,3 +2750,6 @@ document.addEventListener('change', (e) => {
   }
 });
 
+
+// Initial trigger
+router.navigate(window.location.pathname + window.location.search);

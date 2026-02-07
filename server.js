@@ -13,6 +13,7 @@ const unitRoutes = require('./src/routes/unitRoutes');
 const lessonRoutes = require('./src/routes/lessonRoutes');
 const settingsRoutes = require('./src/routes/settingsRoutes');
 const db = require('./src/database/database');
+const initializeDatabase = require('./src/database/initDatabase');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,10 +35,18 @@ if (isProd && process.env.JWT_SECRET.length < 32) {
 async function ensureTablesExist() {
   try {
     const isPostgres = process.env.DATABASE_URL && process.env.NODE_ENV === 'production';
-    
-    // Create videos table if not exists
+
+    // Create videos table if not exists with try-catch for robustness
+    const runSafe = async (sql, desc) => {
+      try {
+        await db.run(sql);
+      } catch (e) {
+        if (!isProd) console.log(`Note: Table setup info for "${desc}": ${e.message}`);
+      }
+    };
+
     if (isPostgres) {
-      await db.run(`
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS videos (
           id SERIAL PRIMARY KEY,
           lesson_id INTEGER NOT NULL,
@@ -48,8 +57,8 @@ async function ensureTablesExist() {
           display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `);
-      await db.run(`
+      `, 'videos');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS images (
           id SERIAL PRIMARY KEY,
           lesson_id INTEGER NOT NULL,
@@ -60,8 +69,8 @@ async function ensureTablesExist() {
           display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `);
-      await db.run(`
+      `, 'images');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS questions (
           id SERIAL PRIMARY KEY,
           lesson_id INTEGER NOT NULL,
@@ -74,9 +83,9 @@ async function ensureTablesExist() {
           display_order INTEGER DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, 'questions');
     } else {
-      await db.run(`
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS videos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           lesson_id INTEGER NOT NULL,
@@ -88,8 +97,8 @@ async function ensureTablesExist() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
         )
-      `);
-      await db.run(`
+      `, 'videos');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS images (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           lesson_id INTEGER NOT NULL,
@@ -101,8 +110,8 @@ async function ensureTablesExist() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
         )
-      `);
-      await db.run(`
+      `, 'images');
+      await runSafe(`
         CREATE TABLE IF NOT EXISTS questions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           lesson_id INTEGER NOT NULL,
@@ -116,10 +125,10 @@ async function ensureTablesExist() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
         )
-      `);
+      `, 'questions');
     }
     console.log('✓ Database tables verified');
-    
+
     // Run database optimization (create indexes)
     const { optimizeDatabase } = require('./src/database/optimizeDatabase');
     await optimizeDatabase();
@@ -132,8 +141,8 @@ async function ensureTablesExist() {
 setTimeout(ensureTablesExist, 1000);
 
 // CORS Configuration (for production when frontend/backend are separate)
-const corsOptions = { 
-  origin: process.env.FRONTEND_URL || '',
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true, // Allow cookies
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -165,7 +174,7 @@ app.use(helmet({
 // Rate Limiting - Prevent brute force attacks
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Increased to 1000 for local dev
   message: { error: 'عدد كبير من الطلبات. يرجى المحاولة لاحقاً' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -174,7 +183,7 @@ const apiLimiter = rateLimit({
 // Strict rate limiting for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login attempts per 15 minutes
+  max: 100, // Increased to 100 for local dev
   message: { error: 'عدد كبير من محاولات تسجيل الدخول. يرجى المحاولة بعد 15 دقيقة' },
   skipSuccessfulRequests: true,
   standardHeaders: true,
@@ -197,7 +206,7 @@ app.use(cookieParser());
 
 app.use((req, res, next) => {
   const reqPath = req.path.toLowerCase();
-  
+
   // Never cache HTML files - always fetch fresh
   if (reqPath.endsWith('.html') || reqPath === '/' || reqPath.startsWith('/admin')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -210,17 +219,11 @@ app.use((req, res, next) => {
     const maxAge = isProd ? 7 * 24 * 60 * 60 : 0; // 7 days in seconds for production
     res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
   }
-  
+
   next();
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag: true,
-  maxAge: 0 // We handle caching in the middleware above
-}));
-
-// API Routes
+// API Routes (mounted before static so /api/* is never served as files)
 app.use('/api/auth', authRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/units', unitRoutes);
@@ -231,6 +234,12 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api', (req, res, next) => {
   res.status(404).json({ error: 'Resource not found' });
 });
+
+// Serve static files (CSS, JS, images from /public)
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  maxAge: 0
+}));
 
 // Redirect /admin and /admin/ to admin login page
 app.get('/admin', (req, res) => {
@@ -264,7 +273,7 @@ app.use((req, res) => {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   const status = err.status || err.statusCode || 500;
-  
+
   // Log error details server-side
   console.error(`[ERROR] ${status} - ${err.message}`);
   if (!isProd) {
@@ -275,7 +284,7 @@ app.use((err, req, res, next) => {
   const errorResponse = {
     error: isProd ? 'حدث خطأ في الخادم' : err.message
   };
-  
+
   // Include stack trace only in development
   if (!isProd && err.stack) {
     errorResponse.stack = err.stack;
@@ -295,21 +304,8 @@ process.on('SIGTERM', () => {
   });
 });
 
-const { initializeDatabase } = require('./src/database/initDatabase');
-
-// Initialize DB before server starts
-initializeDatabase()
-  .then(() => {
-    console.log('Database ready ✅');
-
-    // Start the server only after DB is ready
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-      console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-  })
-  .catch(err => {
-    console.error('Failed to initialize database. Server not started.');
-    process.exit(1); // Stop the app if DB fails
-  });
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});

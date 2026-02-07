@@ -295,8 +295,21 @@ process.on('SIGTERM', () => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+const { initializeDatabase } = require('./src/database/initDatabase');
+
+// Initialize DB before server starts
+initializeDatabase()
+  .then(() => {
+    console.log('Database ready ✅');
+
+    // Start the server only after DB is ready
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`Admin panel: http://localhost:${PORT}/admin/login`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  })
+  .catch(err => {
+    console.error('Failed to initialize database. Server not started.');
+    process.exit(1); // Stop the app if DB fails
+  });
